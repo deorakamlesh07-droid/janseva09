@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Config for Ward Mitra 44
+  - Only allows HTTPS connections (no cleartext HTTP)
+  - Trusts system CAs only (no user-installed certificates)
+  - Add your production domain here (e.g. ward44.vercel.app)
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust system CAs only — user-installed CAs are NOT trusted (prevents MITM attacks) -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Whitelist your production domains -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- Supabase backend -->
+        <domain includeSubdomains="true">supabase.co</domain>
+        <!-- Your deployed Next.js app — update to your real domain -->
+        <domain includeSubdomains="true">vercel.app</domain>
+        <domain includeSubdomains="true">ward44.vercel.app</domain>
+        <!-- Google Fonts -->
+        <domain includeSubdomains="true">fonts.googleapis.com</domain>
+        <domain includeSubdomains="true">fonts.gstatic.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

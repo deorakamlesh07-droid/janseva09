@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables — NEVER push these
+.env.local
+.env*.local
+.env
+
+# Android build artifacts (not needed on Vercel/GitHub)
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+*.apk
+*.aab
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# Capacitor — the android/ source folder IS committed (needed for APK builds)
+# but Gradle cache is not
+.capacitor/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Editor
+.vscode/
+.idea/

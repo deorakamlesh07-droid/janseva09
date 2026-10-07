@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">वार्ड मित्र 44</string>
+    <string name="title_activity_main">वार्ड मित्र 44</string>
+    <string name="package_name">com.ward44.bikaner</string>
+    <string name="custom_url_scheme">com.ward44.bikaner</string>
+</resources>
