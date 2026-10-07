@@ -3,11 +3,11 @@ import { CapacitorConfig } from '@capacitor/cli'
 // 🔴 IMPORTANT: Before building the production APK, replace the url below
 // with your actual deployed Next.js URL (e.g. https://ward44.vercel.app)
 // For local testing: use your machine's LAN IP e.g. http://192.168.1.X:3000
-const PRODUCTION_URL = 'https://ward44.vercel.app'
+const PRODUCTION_URL = 'https://janseva09.vercel.app'
 
 const config: CapacitorConfig = {
   appId: 'com.ward44.bikaner',
-  appName: 'वार्ड मित्र 44',
+  appName: 'जनसेवा 09',
   webDir: 'public', // placeholder — actual content served via server.url
   server: {
     url: PRODUCTION_URL,
