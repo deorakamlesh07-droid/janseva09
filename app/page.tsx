@@ -7,12 +7,16 @@ export const revalidate = 0
 async function getStats() {
   try {
     const supabase = getServiceClient()
-    const { data } = await supabase.from('shikayat').select('status, deadline')
+    const { data } = await supabase
+      .from('shikayat')
+      .select('status, deadline')
+      .neq('status', 'हटाई')
     if (!data) return { total: 0, done: 0, avg: '—', overdue: 0, pending: 0 }
-    const total = data.length
-    const done = data.filter(d => d.status === 'काम पूरा' || d.status === 'पूरा').length
-    const overdue = data.filter(d => d.deadline && new Date(d.deadline) < new Date() && d.status !== 'काम पूरा' && d.status !== 'पूरा').length
-    const pending = data.filter(d => d.status === 'दर्ज').length
+    const valid = data.filter(d => d.status !== 'हटाई')
+    const total = valid.length
+    const done = valid.filter(d => d.status === 'काम पूरा' || d.status === 'पूरा').length
+    const overdue = valid.filter(d => d.deadline && new Date(d.deadline) < new Date() && d.status !== 'काम पूरा' && d.status !== 'पूरा').length
+    const pending = valid.filter(d => d.status === 'दर्ज').length
     return { total, done, avg: '—', overdue, pending }
   } catch {
     return { total: 0, done: 0, avg: '—', overdue: 0, pending: 0 }

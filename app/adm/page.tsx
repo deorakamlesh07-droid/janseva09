@@ -269,8 +269,8 @@ export default function AdminPage() {
     const d = new Date(); d.setDate(d.getDate() - (6 - i))
     const label = d.toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' })
     const dateStr = d.toISOString().slice(0, 10)
-    const total7 = complaints.filter(c => c.created_at?.slice(0, 10) === dateStr).length
-    const done7 = complaints.filter(c => (c.status === 'काम पूरा' || c.status === 'पूरा') && c.created_at?.slice(0, 10) === dateStr).length
+    const total7 = activeComplaints.filter(c => c.created_at?.slice(0, 10) === dateStr).length
+    const done7 = activeComplaints.filter(c => (c.status === 'काम पूरा' || c.status === 'पूरा') && c.created_at?.slice(0, 10) === dateStr).length
     return { label, total7, done7 }
   })
   const maxDay = Math.max(...days7.map(d => d.total7), 1)
