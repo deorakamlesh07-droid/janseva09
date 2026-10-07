@@ -1,8 +1,8 @@
-# Ward Mitra 44 — ProGuard Rules
+# JanSeva Ward 09 Jodhpur — ProGuard Rules
 
 # Keep Capacitor core and all plugins
 -keep class com.getcapacitor.** { *; }
--keep class com.ward44.bikaner.** { *; }
+-keep class com.ward09.jodhpur.** { *; }
 
 # Keep WebView JavaScript interface bridge methods
 -keepclassmembers class * {

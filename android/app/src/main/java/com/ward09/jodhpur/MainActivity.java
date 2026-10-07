@@ -1,4 +1,4 @@
-package com.ward44.bikaner;
+package com.ward09.jodhpur;
 
 import com.getcapacitor.BridgeActivity;
 

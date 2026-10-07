@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Network Security Config for Ward Mitra 44
+  Network Security Config for JanSeva Ward 09 Jodhpur
   - Only allows HTTPS connections (no cleartext HTTP)
   - Trusts system CAs only (no user-installed certificates)
-  - Add your production domain here (e.g. ward44.vercel.app)
+  - Production domain: janseva09.vercel.app
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
@@ -17,9 +17,9 @@
     <domain-config cleartextTrafficPermitted="false">
         <!-- Supabase backend -->
         <domain includeSubdomains="true">supabase.co</domain>
-        <!-- Your deployed Next.js app — update to your real domain -->
+        <!-- Your deployed Next.js app -->
         <domain includeSubdomains="true">vercel.app</domain>
-        <domain includeSubdomains="true">ward44.vercel.app</domain>
+        <domain includeSubdomains="true">janseva09.vercel.app</domain>
         <!-- Google Fonts -->
         <domain includeSubdomains="true">fonts.googleapis.com</domain>
         <domain includeSubdomains="true">fonts.gstatic.com</domain>
