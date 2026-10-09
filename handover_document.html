@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JanSeva 09 - Project Handover &amp; Asset Transfer Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-right {
+      content: counter(page);
+      font-size: 9pt;
+      color: #64748b;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1e293b;
+    background: #ffffff;
+    font-size: 10pt;
+    line-height: 1.55;
+  }
+
+  .header {
+    border-bottom: 2px solid #ea580c;
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .header-left h1 {
+    font-size: 20pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+
+  .header-left h1 span {
+    color: #ea580c;
+  }
+
+  .header-left .subtitle {
+    font-size: 11pt;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  .header-right {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #64748b;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #ffedd5;
+    color: #c2410c;
+    font-weight: 700;
+    font-size: 8pt;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    border-left: 4px solid #ea580c;
+    padding-left: 8px;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #1e293b;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+
+  p {
+    margin-bottom: 8px;
+    color: #334155;
+  }
+
+  ul, ol {
+    margin-left: 20px;
+    margin-bottom: 10px;
+    color: #334155;
+  }
+
+  li {
+    margin-bottom: 4px;
+  }
+
+  .card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 10px 0;
+    page-break-inside: avoid;
+  }
+
+  .card.accent {
+    border-left: 4px solid #0284c7;
+    background: #f0f9ff;
+  }
+
+  .card.warning {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+  }
+
+  .card-title {
+    font-weight: 700;
+    font-size: 9.5pt;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 16px 0;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+  }
+
+  th {
+    background: #0f172a;
+    color: #ffffff;
+    text-align: left;
+    padding: 7px 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 8pt;
+    border: 1px solid #e2e8f0;
+  }
+
+  pre {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 8pt;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    overflow-x: auto;
+    margin: 8px 0;
+    line-height: 1.45;
+    page-break-inside: avoid;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .sign-box {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    page-break-inside: avoid;
+  }
+
+  .sign-column {
+    flex: 1;
+    border: 1px dashed #94a3b8;
+    border-radius: 6px;
+    padding: 14px;
+    background: #fafafa;
+  }
+
+  .sign-title {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 30px;
+    font-size: 9pt;
+    text-transform: uppercase;
+  }
+
+  .sign-line {
+    border-top: 1px solid #475569;
+    padding-top: 4px;
+    font-size: 8pt;
+    color: #64748b;
+  }
+</style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="badge">Official Technical Handover</div>
+      <h1>जनसेवा 09 <span>(JanSeva 09)</span></h1>
+      <div class="subtitle">Ward 9 Citizen Grievance Portal &amp; Android App</div>
+    </div>
+    <div class="header-right">
+      <strong>Document Ver:</strong> 1.0<br>
+      <strong>Date:</strong> October 2026<br>
+      <strong>Status:</strong> Handover Ready
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <h2>1. Executive Summary &amp; Scope</h2>
+  <p>
+    This document outlines the complete procedure to transfer <strong>100% ownership</strong> of the <strong>जनसेवा 09</strong> platform from the developer to the client. Upon following this procedure, all hosting, database management, cloud billing, source code repositories, email notification services, and mobile APK distribution will reside exclusively within client-owned accounts. The developer will retain zero access, billing liability, or operational responsibility.
+  </p>
+
+  <div class="card accent">
+    <div class="card-title">Key Principle: Full Decoupling</div>
+    No personal accounts (such as developer Gmail, personal Vercel, or personal Supabase accounts) should remain in the production environment. All services must be migrated to dedicated client organization accounts.
+  </div>
+
+  <!-- PHASE 1: PREREQUISITES -->
+  <h2>2. Required Client Accounts Checklist</h2>
+  <p>Before beginning the transfer, the client must establish the following free or organization accounts using an official email (e.g., <code>ward09.jodhpur@gmail.com</code>):</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Service</th>
+        <th style="width: 35%;">Purpose</th>
+        <th style="width: 40%;">Sign-Up URL</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>GitHub</strong></td>
+        <td>Source code repository hosting</td>
+        <td><code>https://github.com/signup</code></td>
+      </tr>
+      <tr>
+        <td><strong>Supabase</strong></td>
+        <td>PostgreSQL Database &amp; Storage</td>
+        <td><code>https://supabase.com</code></td>
+      </tr>
+      <tr>
+        <td><strong>Vercel</strong></td>
+        <td>Live Next.js production hosting</td>
+        <td><code>https://vercel.com/signup</code></td>
+      </tr>
+      <tr>
+        <td><strong>Google Account / Gmail</strong></td>
+        <td>Automated citizen &amp; sanchalak email alerts</td>
+        <td>Dedicated Ward official Google account</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PHASE 2: DATABASE TRANSFER -->
+  <h2>3. Database Handover (Supabase)</h2>
+  <p>The system stores citizen complaints, daily work logs (दैनिक कार्य), ward stats, and admin actions on Supabase PostgreSQL.</p>
+
+  <h3>Option A: Transfer Project Ownership (Zero Downtime — Recommended)</h3>
+  <ol>
+    <li>Log into the developer Supabase dashboard (<code>https://supabase.com/dashboard</code>).</li>
+    <li>Select project <code>ward9</code>.</li>
+    <li>Navigate to <strong>Project Settings</strong> &rarr; <strong>General</strong> &rarr; <strong>Members / Team Settings</strong>.</li>
+    <li>Click <strong>Invite Member</strong> &rarr; Enter client's registered Supabase email &rarr; Select <strong>Owner</strong> role.</li>
+    <li>Once the client accepts the invitation, the client removes the developer's email from the organization. Ownership is 100% transferred.</li>
+  </ol>
+
+  <h3>Option B: Fresh Setup on Client's Supabase Account</h3>
+  <ol>
+    <li>Client creates a new project on their Supabase dashboard named <code>janseva09</code>.</li>
+    <li>Open the <strong>SQL Editor</strong> in the new project.</li>
+    <li>Copy and execute the entire contents of <code>supabase-schema.sql</code> (provided in the repository root). This builds all tables, indexes, and row policies.</li>
+    <li>Retrieve the following credentials from <strong>Project Settings &rarr; API</strong>:
+      <ul>
+        <li><code>Project URL</code> (e.g., <code>https://&lt;client-project&gt;.supabase.co</code>)</li>
+        <li><code>anon / public key</code></li>
+        <li><code>service_role key</code> (Secret)</li>
+      </ul>
+    </li>
+  </ol>
+
+  <!-- PAGE BREAK -->
+  <div class="page-break"></div>
+
+  <!-- PHASE 3: HOSTING TRANSFER -->
+  <h2>4. Web Hosting &amp; Server Handover (Vercel)</h2>
+  <p>The web portal runs on Next.js 16 and is hosted at <code>https://janseva09.vercel.app</code> (or client custom domain).</p>
+
+  <h3>Step-by-Step Vercel Transfer:</h3>
+  <ol>
+    <li><strong>Project Transfer via Vercel:</strong> In Vercel Project Settings &rarr; <strong>Advanced</strong> &rarr; <strong>Transfer Project</strong> &rarr; Enter client's Vercel username.</li>
+    <li><strong>Alternative (Import via Client GitHub):</strong>
+      <ul>
+        <li>After the client receives the GitHub repository, log into client Vercel.</li>
+        <li>Click <strong>Add New...</strong> &rarr; <strong>Project</strong> &rarr; Import <code>janseva09</code>.</li>
+        <li>Framework Preset: <code>Next.js</code> (automatically detected).</li>
+      </ul>
+    </li>
+    <li><strong>Configuring Environment Variables in Vercel:</strong><br>
+      Add the following keys in <strong>Project Settings &rarr; Environment Variables</strong>:
+    </li>
+  </ol>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 32%;">Variable Key</th>
+        <th style="width: 30%;">Source / Value</th>
+        <th style="width: 38%;">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+        <td>Client Supabase Project URL</td>
+        <td>Database REST endpoint</td>
+      </tr>
+      <tr>
+        <td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+        <td>Client Supabase Anon Key</td>
+        <td>Public browser database key</td>
+      </tr>
+      <tr>
+        <td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+        <td>Client Service Role Key</td>
+        <td>Backend privileged admin key</td>
+      </tr>
+      <tr>
+        <td><code>SUPABASE_SECRET_KEY</code></td>
+        <td>Client Service Role Key</td>
+        <td>Fallback backend secret key</td>
+      </tr>
+      <tr>
+        <td><code>ADMIN_PASSWORD</code></td>
+        <td>Secure password chosen by client</td>
+        <td>Portal admin panel access password</td>
+      </tr>
+      <tr>
+        <td><code>SANCHALAK_EMAIL</code></td>
+        <td>Client official email</td>
+        <td>Receives real-time complaint alerts</td>
+      </tr>
+      <tr>
+        <td><code>SMTP_HOST</code></td>
+        <td><code>smtp.gmail.com</code></td>
+        <td>Outgoing mail server</td>
+      </tr>
+      <tr>
+        <td><code>SMTP_PORT</code></td>
+        <td><code>587</code></td>
+        <td>Standard TLS mail port</td>
+      </tr>
+      <tr>
+        <td><code>SMTP_USER</code></td>
+        <td>Client official Gmail address</td>
+        <td>Sender account</td>
+      </tr>
+      <tr>
+        <td><code>SMTP_PASS</code></td>
+        <td>Google 16-char App Password</td>
+        <td>Dedicated SMTP app password</td>
+      </tr>
+      <tr>
+        <td><code>SMTP_FROM</code></td>
+        <td><code>"वार्ड मित्र 09" &lt;email&gt;</code></td>
+        <td>Email display header</td>
+      </tr>
+      <tr>
+        <td><code>NEXT_PUBLIC_APP_URL</code></td>
+        <td><code>https://janseva09.vercel.app</code></td>
+        <td>Production web base URL</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PHASE 4: EMAIL SMTP SETUP -->
+  <h2>5. Email &amp; SMTP Configuration (Google App Password)</h2>
+  <div class="card warning">
+    <div class="card-title">Crucial Step: Removing Personal Email</div>
+    All outgoing citizen emails (complaint registration code, resolution confirmation) and Sanchalak alerts must be migrated to the client's Google Account.
+  </div>
+
+  <ol>
+    <li>Log into the client's official Google account.</li>
+    <li>Navigate to <strong>Manage Your Google Account</strong> &rarr; <strong>Security</strong>.</li>
+    <li>Ensure <strong>2-Step Verification</strong> is switched <strong>ON</strong>.</li>
+    <li>Under 2-Step Verification, scroll down to <strong>App passwords</strong>.</li>
+    <li>Create an App Password with name: <code>JanSeva Portal</code>.</li>
+    <li>Google will generate a 16-letter password (e.g. <code>abcd efgh ijkl mnop</code>).</li>
+    <li>Set this 16-character string as <code>SMTP_PASS</code> in Vercel environment variables.</li>
+  </ol>
+
+  <!-- PHASE 5: SOURCE CODE & GITHUB -->
+  <h2>6. Source Code Repository Transfer (GitHub)</h2>
+  <ol>
+    <li>Open repository: <code>https://github.com/deorakamlesh07-droid/janseva09</code></li>
+    <li>Go to <strong>Settings</strong> &rarr; Scroll down to <strong>Danger Zone</strong>.</li>
+    <li>Click <strong>Transfer ownership</strong>.</li>
+    <li>Enter the client's GitHub username or organization name and confirm.</li>
+    <li>The client accepts the email invitation to complete the repository transfer.</li>
+  </ol>
+
+  <!-- PAGE BREAK -->
+  <div class="page-break"></div>
+
+  <!-- PHASE 6: ANDROID APK HANDOVER -->
+  <h2>7. Android Mobile App (APK) Handover</h2>
+  <p>
+    The mobile app is built with <strong>Capacitor</strong>. It functions as a native Android container loading the secure production web application, ensuring instant real-time synchronization with website updates.
+  </p>
+
+  <div class="card">
+    <div class="card-title">App Configuration Summary</div>
+    <ul>
+      <li><strong>App Package ID:</strong> <code>com.ward09.jodhpur</code></li>
+      <li><strong>App Name:</strong> <code>जनसेवा 09</code></li>
+      <li><strong>Icon Assets:</strong> Official Ward 9 icon generated across all Android densities (<code>mipmap-mdpi</code> to <code>mipmap-xxxhdpi</code>) with adaptive icon safe-zone margins.</li>
+      <li><strong>Production URL:</strong> Configured in <code>capacitor.config.ts</code> pointing to the live portal.</li>
+    </ul>
+  </div>
+
+  <h3>How to Build Future APK Releases:</h3>
+  <pre># 1. Navigate to android directory
+cd e:\ward9\android
+
+# 2. Build Debug APK (for instant testing)
+.\gradlew assembleDebug
+# Output: android\app\build\outputs\apk\debug\app-debug.apk
+
+# 3. Build Release APK (for production / distribution)
+.\gradlew assembleRelease
+# Output: android\app\build\outputs\apk\release\app-release-unsigned.apk</pre>
+
+  <!-- PHASE 7: DELIVERABLES CHECKLIST -->
+  <h2>8. Master Deliverables Checklist</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Asset / Deliverable</th>
+        <th>Handover Format</th>
+        <th>Client Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Web Portal URL</strong></td>
+        <td><code>https://janseva09.vercel.app</code> (or custom domain)</td>
+        <td>[ &nbsp; ] Verified active</td>
+      </tr>
+      <tr>
+        <td><strong>Admin Panel Access</strong></td>
+        <td>URL: <code>/admin</code> &nbsp;|&nbsp; Password: Set by client</td>
+        <td>[ &nbsp; ] Login confirmed</td>
+      </tr>
+      <tr>
+        <td><strong>Database &amp; Storage</strong></td>
+        <td>Supabase Project Dashboard</td>
+        <td>[ &nbsp; ] Owner role active</td>
+      </tr>
+      <tr>
+        <td><strong>Hosting Server</strong></td>
+        <td>Vercel Dashboard</td>
+        <td>[ &nbsp; ] Project transferred</td>
+      </tr>
+      <tr>
+        <td><strong>Source Code</strong></td>
+        <td>Full Git Repository</td>
+        <td>[ &nbsp; ] Transferred on GitHub</td>
+      </tr>
+      <tr>
+        <td><strong>Android APK</strong></td>
+        <td>Installable <code>.apk</code> file with custom ward icon</td>
+        <td>[ &nbsp; ] Installed on device</td>
+      </tr>
+      <tr>
+        <td><strong>Email Notifications</strong></td>
+        <td>Citizen &amp; Sanchalak automated emails</td>
+        <td>[ &nbsp; ] Test email received</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SIGN-OFF SECTION -->
+  <h2>9. Formal Sign-Off &amp; Acceptance</h2>
+  <p>
+    By signing below, the client acknowledges receipt of all assets, source code, administrative credentials, and operational controls for JanSeva 09. The developer is fully discharged from future cloud hosting fees, maintenance, and data administration obligations.
+  </p>
+
+  <div class="sign-box">
+    <div class="sign-column">
+      <div class="sign-title">Handed Over By (Developer)</div>
+      <p style="margin-bottom: 25px;">Name: _________________________________</p>
+      <div class="sign-line">Signature &amp; Date</div>
+    </div>
+    <div class="sign-column">
+      <div class="sign-title">Accepted By (Client Representative)</div>
+      <p style="margin-bottom: 25px;">Name: _________________________________</p>
+      <div class="sign-line">Signature &amp; Date</div>
+    </div>
+  </div>
+
+</body>
+</html>

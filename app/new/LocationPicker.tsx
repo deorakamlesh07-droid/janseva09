@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { Geolocation } from '@capacitor/geolocation'
 import { useLanguage } from '@/context/LanguageContext'
 
 interface LocationPickerProps {
@@ -124,14 +126,73 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
   }
 
   // 4. GPS "मेरी वर्तमान लोकेशन प्राप्त करें"
-  function handleGetCurrentLocation() {
-    if (!navigator.geolocation) {
-      setLocError('आपके ब्राउज़र में GPS लोकेशन समर्थित नहीं है।')
-      return
-    }
-
+  async function handleGetCurrentLocation() {
     setLocating(true)
     setLocError('')
+
+    const isNative = typeof window !== 'undefined' && (
+      Capacitor.isNativePlatform() ||
+      window.location.search.includes('apk=true') ||
+      window.location.search.includes('apk=1') ||
+      /Capacitor|JanSeva09App/i.test(navigator.userAgent)
+    )
+
+    // APK Native Flow: Explicitly prompt Android native location permission
+    if (isNative) {
+      try {
+        let permStatus = await Geolocation.checkPermissions()
+
+        // If not granted, trigger native Android location permission request dialog
+        if (permStatus.location !== 'granted') {
+          permStatus = await Geolocation.requestPermissions()
+        }
+
+        if (permStatus.location !== 'granted') {
+          setLocating(false)
+          setLocError(t('लोकेशन की अनुमति नहीं दी गई। कृपया फ़ोन सेटिंग्स ➔ ऐप्स ➔ जनसेवा 09 में लोकेशन अनुमति दें।'))
+          return
+        }
+
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
+
+        const { latitude, longitude } = pos.coords
+        setLocating(false)
+        updatePosition(latitude, longitude)
+
+        const map = mapInstanceRef.current
+        const marker = markerRef.current
+        if (map && marker) {
+          map.setView([latitude, longitude], 17)
+          marker.setLatLng([latitude, longitude])
+          marker.bindPopup('<b>✅ आपकी वर्तमान लोकेशन</b><br>पिन सटीक स्थान पर है').openPopup()
+        }
+        return
+      } catch (nativeErr: any) {
+        console.warn('[APK Geolocation] Native error, trying web fallback:', nativeErr)
+        const errMsg = (nativeErr?.message || '').toLowerCase()
+        if (errMsg.includes('denied') || errMsg.includes('permission')) {
+          setLocating(false)
+          setLocError(t('लोकेशन की अनुमति नहीं दी गई। कृपया फ़ोन सेटिंग्स में लोकेशन अनुमति दें।'))
+          return
+        }
+        if (errMsg.includes('disabled') || errMsg.includes('location services')) {
+          setLocating(false)
+          setLocError(t('फ़ोन का GPS / लोकेशन बंद है। कृपया नोटिफिकेशन बार से लोकेशन चालू करें।'))
+          return
+        }
+      }
+    }
+
+    // Web Browser Flow (Standard browser Geolocation API)
+    if (!navigator.geolocation) {
+      setLocating(false)
+      setLocError(t('आपके ब्राउज़र में GPS लोकेशन समर्थित नहीं है।'))
+      return
+    }
 
     navigator.geolocation.getCurrentPosition(
       pos => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { Capacitor } from '@capacitor/core'
 import LanguageSlidebar from './LanguageSlidebar'
 import { useLanguage } from '@/context/LanguageContext'
 
@@ -119,8 +120,30 @@ const LINKS: NavLinkItem[] = [
 
 export default function NavClient() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isApk, setIsApk] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const pathname = usePathname()
   const { lang } = useLanguage()
+
+  // Detect APK native environment (Capacitor or APK test query)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const native =
+        Capacitor.isNativePlatform() ||
+        window.location.search.includes('apk=true') ||
+        window.location.search.includes('apk=1') ||
+        /Capacitor|JanSeva09App/i.test(navigator.userAgent)
+      setIsApk(native)
+    }
+  }, [])
+
+  const handleRefresh = () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+    setTimeout(() => {
+      window.location.reload()
+    }, 350)
+  }
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
@@ -194,6 +217,23 @@ export default function NavClient() {
           </div>
 
           <div className="nav-actions">
+            {/* APK ONLY: Refresh Button in top bar */}
+            {isApk && (
+              <button
+                type="button"
+                className={`apk-refresh-btn ${isRefreshing ? 'is-spinning' : ''}`}
+                onClick={handleRefresh}
+                title={lang === 'en' ? 'Refresh Page' : 'पेज रिफ्रेश करें'}
+                aria-label={lang === 'en' ? 'Refresh Page' : 'पेज रिफ्रेश करें'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.5 2v6h-6" />
+                  <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19" />
+                </svg>
+                <span className="apk-refresh-label">{lang === 'en' ? 'Refresh' : 'रिफ्रेश'}</span>
+              </button>
+            )}
+
             <LanguageSlidebar />
 
             <a className="emg" href="/numbers" title={lang === 'en' ? 'Emergency Contacts' : 'आपातकालीन नंबर'}>
@@ -261,6 +301,24 @@ export default function NavClient() {
         </nav>
 
         <div className="slidebar-footer">
+          {/* APK ONLY: Refresh Button in drawer footer */}
+          {isApk && (
+            <button
+              type="button"
+              className="slidebar-refresh-btn"
+              onClick={() => {
+                setIsOpen(false)
+                handleRefresh()
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6" />
+                <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19" />
+              </svg>
+              <span>{lang === 'en' ? 'Refresh App' : 'ऐप रिफ्रेश करें'}</span>
+            </button>
+          )}
+
           <a
             href="/numbers"
             className="slidebar-emg-btn"
@@ -278,3 +336,4 @@ export default function NavClient() {
     </>
   )
 }
+
