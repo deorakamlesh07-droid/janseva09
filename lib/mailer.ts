@@ -334,3 +334,162 @@ ${after_photo_url ? `समाधान फ़ोटो प्रमाण: ${af
     return { ok: false, error: err.message }
   }
 }
+
+export interface ComplaintCitizenConfirmationProps {
+  code: string
+  name: string
+  toEmail: string
+  category: string
+  mohalla: string
+  detail: string
+  photo_url?: string | null
+}
+
+export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCitizenConfirmationProps) {
+  const { code, name, toEmail, category, mohalla, detail, photo_url } = props
+
+  if (!toEmail || !toEmail.includes('@')) {
+    console.log(`[Mailer] नागरिक ईमेल अनुपलब्ध है (${code}). पुष्टिकरण ईमेल नहीं भेजा गया।`)
+    return { ok: false, message: 'ईमेल पता नहीं दिया गया है।' }
+  }
+
+  const transporter = getMailTransporter()
+  if (!transporter) {
+    console.log(`[Mailer] SMTP क्रेडेंशियल सेट नहीं हैं। नागरिक को पुष्टिकरण ईमेल नहीं भेजा जा सका (${code} -> ${toEmail})`)
+    return { ok: false, message: 'SMTP क्रेडेंशियल सेट नहीं हैं।' }
+  }
+
+  const smtpUser = process.env.SMTP_USER || ''
+  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const codeSlug = code.replace('/', '-')
+  const publicUrl = `${appUrl}/s/${codeSlug}`
+
+  try {
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+        <!-- Top Header Banner -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%); padding: 26px 28px; color: #ffffff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.8px;">वार्ड 09 · जनसेवा पावती (Acknowledgment)</span>
+            <span style="background: rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px;">✓ दर्ज हुई</span>
+          </div>
+          <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; line-height: 1.3;">आपकी शिकायत सफलतापूर्वक दर्ज हो गई है</h1>
+          
+          <!-- Prominent Complaint Code Badge -->
+          <div style="margin-top: 12px; background: #ffffff; padding: 12px 18px; border-radius: 10px; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <div style="font-size: 12px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px;">आपकी शिकायत संख्या / कोड:</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1e40af; letter-spacing: 0.5px; margin-top: 2px;">
+              ${code}
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Body -->
+        <div style="padding: 28px;">
+          <p style="font-size: 15.5px; line-height: 1.6; color: #1f2937; margin: 0 0 18px 0;">
+            नमस्ते <strong>${name} जी</strong>,<br>
+            वार्ड 09 जनसेवा पोर्टल पर आपकी शिकायत प्राप्त हो गई है। इसे वार्ड पार्षद श्री <strong>संजय बिश्नोई (पार्षद वार्ड 09)</strong> एवं वार्ड टीम के संज्ञान में दर्ज कर लिया गया है।
+          </p>
+
+          <!-- Status Highlight Card -->
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;">
+            <div style="font-size: 12.5px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">वर्तमान स्थिति</div>
+            <div style="font-size: 17px; font-weight: 800; color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
+              📋 दर्ज (Registered) — जल्द कार्रवाई की जाएगी
+            </div>
+          </div>
+
+          <!-- Complaint Details Table -->
+          <h2 style="font-size: 15px; margin: 0 0 12px 0; color: #374151; border-bottom: 2px solid #f3f4f6; padding-bottom: 6px;">दर्ज की गई शिकायत का विवरण</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280; width: 130px;">शिकायत संख्या:</td>
+              <td style="padding: 7px 0; color: #1e40af; font-weight: 800; font-size: 15px;">${code}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280;">शिकायत श्रेणी:</td>
+              <td style="padding: 7px 0; color: #111827; font-weight: 700;">${category}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280;">मोहल्ला / क्षेत्र:</td>
+              <td style="padding: 7px 0; color: #111827; font-weight: 600;">${mohalla}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280; vertical-align: top;">समस्या का विवरण:</td>
+              <td style="padding: 7px 0; color: #374151; font-size: 13.5px; line-height: 1.5;">${detail}</td>
+            </tr>
+          </table>
+
+          <!-- Attached Photo (if any) -->
+          ${
+            photo_url
+              ? `
+            <div style="margin: 20px 0; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px;">
+              <h3 style="font-size: 13.5px; margin: 0 0 8px 0; color: #4b5563; font-weight: 700;">
+                📷 आपके द्वारा संलग्न फ़ोटो:
+              </h3>
+              <a href="${photo_url}" target="_blank">
+                <img src="${photo_url}" alt="शिकायत फ़ोटो" style="max-width: 100%; height: auto; max-height: 240px; border-radius: 8px; border: 1px solid #d1d5db; object-fit: cover;" />
+              </a>
+            </div>
+          `
+              : ''
+          }
+
+          <!-- View Action Button -->
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="${publicUrl}" target="_blank" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 3px 8px rgba(37,99,235,0.3);">
+              पोर्टल पर स्थिति ट्रैक करें →
+            </a>
+          </div>
+
+          <div style="margin-top: 26px; padding: 14px 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; font-size: 13px; color: #854d0e; line-height: 1.5;">
+            <strong>📌 ध्यान रखें:</strong> कृपया भविष्य के संदर्भ और शिकायत की प्रगति जांचने के लिए यह शिकायत नंबर <strong>${code}</strong> सुरक्षित रखें। जैसे ही इस समस्या का समाधान हो जाएगा, आपको पुनः ईमेल भेजकर सूचित किया जाएगा।
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
+          वार्ड 09 जनसेवा · संजय बिश्नोई (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
+        </div>
+      </div>
+    `
+
+    const textContent = `
+वार्ड मित्र 09 · जनसेवा पावती
+नमस्ते ${name} जी,
+
+आपकी शिकायत सफलतापूर्वक दर्ज कर ली गई है!
+आपकी शिकायत संख्या / कोड: ${code}
+
+स्थिति: दर्ज (Registered)
+शिकायत श्रेणी: ${category}
+मोहल्ला: ${mohalla}
+
+विवरण:
+${detail}
+
+पोर्टल पर स्थिति देखें / ट्रैक करें:
+${publicUrl}
+
+कृपया यह शिकायत नंबर (${code}) भविष्य के लिए सुरक्षित रखें। समाधान होने पर आपको पुनः ईमेल भेजा जाएगा।
+— संजय बिश्नोई (पार्षद वार्ड 09)
+    `
+
+    const info = await transporter.sendMail({
+      from: smtpFrom,
+      to: toEmail,
+      subject: `[वार्ड 09 जनसेवा] आपकी शिकायत दर्ज हुई — शिकायत नंबर: ${code}`,
+      text: textContent,
+      html: htmlContent,
+    })
+
+    console.log(`[Mailer] नागरिक पुष्टिकरण ईमेल भेजा गया: ${info.messageId} to ${toEmail} for ${code}`)
+    return { ok: true, messageId: info.messageId }
+  } catch (err: any) {
+    console.error(`[Mailer] नागरिक पुष्टिकरण ईमेल भेजने में त्रुटि (${toEmail}):`, err)
+    return { ok: false, error: err.message }
+  }
+}
+

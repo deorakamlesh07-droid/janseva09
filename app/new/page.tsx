@@ -129,7 +129,7 @@ function NewComplaintForm() {
         {success && (
           <div className="succ">
             <b>{t('शिकायत दर्ज हो गई —')} {success}</b>
-            <p>{t('आपका कोड नोट कर लीजिए। स्थिति देखने के लिए इसी कोड का उपयोग करें।')}</p>
+            <p>{t('शिकायत नंबर आपकी ईमेल पर भेज दिया गया है। स्थिति देखने के लिए इसी कोड का उपयोग करें।')}</p>
           </div>
         )}
 
@@ -188,7 +188,7 @@ function NewComplaintForm() {
           <div className="f">
             <label htmlFor="a-email" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>{t('ईमेल पता')} <strong style={{ color: '#DC2626' }}>{t('* (अनिवार्य)')}</strong></span>
-              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{t('समाधान पर ईमेल आएगा')}</span>
+              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{t('शिकायत सं. व समाधान ईमेल पर आएगा')}</span>
             </label>
             <input
               id="a-email"
@@ -198,8 +198,9 @@ function NewComplaintForm() {
               placeholder={t('जैसे — rahul@gmail.com')}
               required
             />
-            <div className="hint">{t('शिकायत का समाधान होने पर तुरंत आपको इस ईमेल पर सूचना भेजी जाएगी।')}</div>
+            <div className="hint">{t('शिकायत दर्ज होते ही शिकायत नंबर और समाधान होने पर सूचना आपको इस ईमेल पर भेजी जाएगी।')}</div>
           </div>
+
 
           <div className="f">
             <label htmlFor="a3">{t('पता / मोहल्ला')}</label>

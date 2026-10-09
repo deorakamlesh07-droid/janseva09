@@ -1,7 +1,7 @@
 import { getServiceClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { sendComplaintNotificationEmail } from '@/lib/mailer'
+import { sendComplaintNotificationEmail, sendComplaintCitizenConfirmationEmail } from '@/lib/mailer'
 
 async function getNextCode(): Promise<string> {
   const supabase = getServiceClient()
@@ -116,6 +116,19 @@ export async function POST(req: NextRequest) {
       latitude: lat || undefined,
       longitude: lng || undefined,
     }).catch(err => console.error('[Mailer] Background error:', err))
+
+    // Asynchronously send confirmation email with complaint code to the Citizen
+    if (email) {
+      sendComplaintCitizenConfirmationEmail({
+        code,
+        name,
+        toEmail: email,
+        category,
+        mohalla,
+        detail,
+        photo_url,
+      }).catch(err => console.error('[Mailer] Citizen confirmation error:', err))
+    }
 
     return NextResponse.json({ ok: true, code })
   } catch (e) {
