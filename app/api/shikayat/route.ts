@@ -3,6 +3,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { sendComplaintNotificationEmail, sendComplaintCitizenConfirmationEmail } from '@/lib/mailer'
 
+/** Runs a promise with a timeout — never throws, just logs on failure */
+async function sendSafe(label: string, promise: Promise<any>, timeoutMs = 8000) {
+  try {
+    await Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs)),
+    ])
+  } catch (err: any) {
+    console.error(`[Mailer] ${label} failed:`, err?.message || err)
+  }
+}
+
 async function getNextCode(): Promise<string> {
   const supabase = getServiceClient()
   const { data } = await supabase
@@ -103,23 +115,26 @@ export async function POST(req: NextRequest) {
     revalidatePath('/', 'page')
     revalidatePath('/register', 'page')
 
-    // Asynchronously send email notification to Sanchalak (never blocks user response)
-    sendComplaintNotificationEmail({
-      code,
-      name,
-      phone,
-      email,
-      mohalla,
-      category,
-      detail: fullDetail,
-      photo_url,
-      latitude: lat || undefined,
-      longitude: lng || undefined,
-    }).catch(err => console.error('[Mailer] Background error:', err))
-
-    // Asynchronously send confirmation email with complaint code to the Citizen
-    if (email) {
-      sendComplaintCitizenConfirmationEmail({
+    // Await both emails before returning the response.
+    // CRITICAL: In Vercel serverless, floating .catch() promises are killed the
+    // instant NextResponse is returned — emails would silently never send.
+    // Using sendSafe() ensures errors are caught and logged, not thrown.
+    await Promise.all([
+      // 1. Admin notification → Sanchalak
+      sendSafe('Sanchalak notification', sendComplaintNotificationEmail({
+        code,
+        name,
+        phone,
+        email,
+        mohalla,
+        category,
+        detail: fullDetail,
+        photo_url,
+        latitude: lat || undefined,
+        longitude: lng || undefined,
+      })),
+      // 2. Citizen confirmation with complaint number
+      ...(email ? [sendSafe('Citizen confirmation', sendComplaintCitizenConfirmationEmail({
         code,
         name,
         toEmail: email,
@@ -127,8 +142,8 @@ export async function POST(req: NextRequest) {
         mohalla,
         detail,
         photo_url,
-      }).catch(err => console.error('[Mailer] Citizen confirmation error:', err))
-    }
+      }))] : []),
+    ])
 
     return NextResponse.json({ ok: true, code })
   } catch (e) {
