@@ -23,15 +23,18 @@ export async function POST(req: NextRequest) {
 
     const name = (fd.get('name') as string || '').trim()
     const phone = (fd.get('phone') as string || '').trim()
+    const email = (fd.get('email') as string || '').trim().toLowerCase()
     const mohalla = (fd.get('mohalla') as string || '').trim()
     const category = (fd.get('category') as string || 'गली की सफ़ाई').trim()
     const detail = (fd.get('detail') as string || '').trim()
     const photo = fd.get('photo') as File | null
 
-    if (!name || !phone || !mohalla || !detail)
-      return NextResponse.json({ error: 'सभी ज़रूरी जानकारी भरिए।' }, { status: 400 })
+    if (!name || !phone || !email || !mohalla || !detail)
+      return NextResponse.json({ error: 'सभी ज़रूरी जानकारी भरिए (ईमेल सहित)।' }, { status: 400 })
     if (!/^\d{10,15}$/.test(phone))
       return NextResponse.json({ error: 'फ़ोन नंबर 10 अंकों का होना चाहिए।' }, { status: 400 })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return NextResponse.json({ error: 'कृपया सही ईमेल पता दर्ज करें (उदा. name@example.com)।' }, { status: 400 })
 
     if (!photo || photo.size === 0) {
       return NextResponse.json({ error: 'फ़ोटो लगाना अनिवार्य है। बिना फ़ोटो के शिकायत दर्ज नहीं हो सकती।' }, { status: 400 })
@@ -74,10 +77,26 @@ export async function POST(req: NextRequest) {
     }
 
     const code = await getNextCode()
-    const { error } = await supabase.from('shikayat').insert({
-      code, name, phone, mohalla, category, detail: fullDetail, photo_url, status: 'दर्ज',
+
+    // Resilient insert: Try with email column first, fallback to appending in detail if schema not updated yet
+    let dbError = null
+    const { error: errWithEmail } = await supabase.from('shikayat').insert({
+      code, name, phone, email, mohalla, category, detail: fullDetail, photo_url, status: 'दर्ज',
     })
-    if (error) return NextResponse.json({ error: 'डेटाबेस में समस्या आई।' }, { status: 500 })
+
+    if (errWithEmail) {
+      console.warn('[Shikayat] Insert with email column notice:', errWithEmail.message)
+      const detailWithEmail = `${fullDetail}\n\n✉️ शिकायतकर्ता ईमेल: ${email}`
+      const { error: errFallback } = await supabase.from('shikayat').insert({
+        code, name, phone, mohalla, category, detail: detailWithEmail, photo_url, status: 'दर्ज',
+      })
+      dbError = errFallback
+    }
+
+    if (dbError) {
+      console.error('[Shikayat] DB insert error:', dbError)
+      return NextResponse.json({ error: 'डेटाबेस में समस्या आई।' }, { status: 500 })
+    }
 
     revalidatePath('/')
     revalidatePath('/register')
@@ -89,6 +108,7 @@ export async function POST(req: NextRequest) {
       code,
       name,
       phone,
+      email,
       mohalla,
       category,
       detail: fullDetail,

@@ -1,4 +1,5 @@
 import { getServiceClient, Shikayat } from '@/lib/supabase'
+import { getDainikKaryaList } from '@/lib/dainikKarya'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -172,7 +173,7 @@ const SERVICE_CATS = [
 // ── Page Component ─────────────────────────────────────────────────────────
 export default async function Home({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
   const sp = await searchParams
-  const [stats, complaints] = await Promise.all([getStats(), getRecentComplaints()])
+  const [stats, complaints, dainikList] = await Promise.all([getStats(), getRecentComplaints(), getDainikKaryaList()])
 
   return (
     <>
@@ -376,6 +377,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
               </span>
               <b>शिकायत दर्ज</b>
             </a>
+            <a className="tile tile-karya" href="/dainik-karya" style={{ border: '1.5px solid var(--line)', background: '#FFF3E8' }}>
+              <span className="ic" style={{ color: 'var(--amber)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                  <path d="m9 16 2 2 4-4" />
+                </svg>
+              </span>
+              <b style={{ color: 'var(--ink)' }}>दैनिक कार्य</b>
+            </a>
             <a className="tile tile-wa" href="/new">
               <span className="ic">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -432,6 +445,122 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
               </span>
               <b>ब्लड डोनर</b>
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DAINIK KARYA HIGHLIGHT ───────────────────────────────────────── */}
+      <section className="sec" style={{ background: '#FFF8F0', borderBottom: '1px solid var(--line)', padding: '38px 0' }}>
+        <div className="wrap">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--amber-s)', color: 'var(--amber-d)', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                <span>🏛️ संचालक रिपोर्ट</span>
+                <span>•</span>
+                <span>पारदर्शी वार्ड सेवा</span>
+              </div>
+              <h2 className="sh" style={{ margin: 0 }}>दैनिक कार्य रिपोर्ट (Daily Activities)</h2>
+              <p className="sp" style={{ margin: '4px 0 0' }}>वार्ड 09 में प्रतिदिन होने वाले सफ़ाई, सड़क और विकास कार्यों का सार्वजनिक विवरण</p>
+            </div>
+            <a
+              href="/dainik-karya"
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--amber)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: '#ffffff',
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1.5px solid var(--line)',
+                boxShadow: '0 2px 6px rgba(217,92,0,0.06)',
+              }}
+            >
+              <span>सभी दैनिक कार्य देखें</span>
+              <span>→</span>
+            </a>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 16 }}>
+            {dainikList && dainikList.length > 0 ? (
+              dainikList.slice(0, 3).map(item => (
+                <div
+                  key={item.id}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: 14,
+                    border: '1px solid var(--line)',
+                    padding: '16px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ fontSize: 12, color: 'var(--ink2)', fontWeight: 600 }}>
+                        📅 {new Date(item.work_date).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' })}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11.5,
+                          background: 'var(--surface)',
+                          color: 'var(--ink)',
+                          padding: '2px 8px',
+                          borderRadius: 12,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {item.category}
+                      </span>
+                    </div>
+
+                    <h3
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: 'var(--ink)',
+                        margin: '0 0 8px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {item.title}
+                    </h3>
+
+                    <p
+                      style={{
+                        fontSize: 13.5,
+                        color: '#4B5563',
+                        margin: '0 0 12px',
+                        lineHeight: 1.5,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {item.description}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid #F3F4F6', fontSize: 12.5 }}>
+                    <span style={{ color: 'var(--ink2)' }}>
+                      {item.area ? `📍 ${item.area}` : 'वार्ड 09, जोधपुर'}
+                    </span>
+                    <a href="/dainik-karya" style={{ color: 'var(--amber)', fontWeight: 700 }}>
+                      विवरण देखें →
+                    </a>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ background: '#fff', borderRadius: 12, padding: '24px', textAlign: 'center', gridColumn: '1 / -1', border: '1px dashed var(--line)' }}>
+                <span style={{ fontSize: 14, color: 'var(--ink2)' }}>दैनिक कार्य रिपोर्ट जल्द ही यहाँ उपलब्ध होगी।</span>
+              </div>
+            )}
           </div>
         </div>
       </section>

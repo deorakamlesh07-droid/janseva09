@@ -92,3 +92,21 @@ create table if not exists citizens (
 alter table citizens enable row level security;
 create policy "public read citizens" on citizens for select using (true);
 
+-- Ensure email column exists on complaints (shikayat)
+alter table shikayat add column if not exists email text;
+
+-- Daily Activities / Dainik Karya table
+create table if not exists dainik_karya (
+  id bigserial primary key,
+  title text not null,
+  description text not null,
+  work_date date not null default CURRENT_DATE,
+  area text,
+  category text not null default 'सफ़ाई कार्य',
+  photo_url text,
+  created_at timestamptz not null default now()
+);
+
+alter table dainik_karya enable row level security;
+create policy "public read dainik_karya" on dainik_karya for select using (true);
+

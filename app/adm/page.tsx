@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase, Shikayat } from '@/lib/supabase'
+import { useState, useEffect, useRef } from 'react'
+import { supabase, Shikayat, DainikKarya } from '@/lib/supabase'
 
-const TABS = ['शिकायतें', 'आँकड़े', 'नागरिक रिकॉर्ड (फ़ोन डायरेक्टरी)', 'खोया–पाया', 'ब्लड डोनर']
+const TABS = ['शिकायतें', 'दैनिक कार्य', 'आँकड़े', 'नागरिक रिकॉर्ड (फ़ोन डायरेक्टरी)', 'खोया–पाया', 'ब्लड डोनर']
 
 function getNowFormatted() {
   const now = new Date()
@@ -153,7 +153,7 @@ export default function AdminPage() {
         )
         setFeedback(prev => ({
           ...prev,
-          [c.id]: `✓ काम पूरा सीधे पोर्टल पर दर्ज हुआ (${timeStamp})`,
+          [c.id]: `✓ काम पूरा सीधे पोर्टल पर दर्ज हुआ (${timeStamp}) · नागरिक को समाधान ईमेल भेजा गया`,
         }))
       } else {
         alert(result.error || 'पोर्टल पर दर्ज करने में समस्या आई।')
@@ -195,7 +195,7 @@ export default function AdminPage() {
         )
         setFeedback(prev => ({
           ...prev,
-          [c.id]: `✓ काम की फ़ोटो अपलोड हुई और "काम पूरा" सीधे पोर्टल पर दर्ज हुआ (${timeStamp})`,
+          [c.id]: `✓ काम की फ़ोटो अपलोड हुई और "काम पूरा" सीधे पोर्टल पर दर्ज हुआ (${timeStamp}) · नागरिक को समाधान ईमेल भेजा गया`,
         }))
       } else {
         alert(result.error || 'फ़ोटो अपलोड में समस्या आई। फिर कोशिश कीजिए।')
@@ -207,19 +207,21 @@ export default function AdminPage() {
     }
   }
 
-  // Remove complaint (mark as हटाई)
+  // Remove complaint (permanently deletes from database and storage)
   async function removeComplaint(id: number) {
-    if (!confirm('क्या आप वाकई इस शिकायत को हटाना चाहते हैं?')) return
+    if (!confirm('क्या आप वाकई इस शिकायत को डेटाबेस से हमेशा के लिए हटाना (Delete) चाहते हैं? यह डेटाबेस और वेब दोनों से पूरी तरह हट जाएगी।')) return
     try {
       const res = await fetch('/api/adm/complaint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'हटाई' }),
+        body: JSON.stringify({ id, action: 'delete', status: 'हटाई' }),
       })
-      if (res.ok) {
+      const result = await res.json()
+      if (res.ok && result.ok) {
         setComplaints(prev => prev.filter(c => c.id !== id))
+        alert('शिकायत डेटाबेस से सफलतापूर्वक हटा दी गई है।')
       } else {
-        alert('शिकायत हटाने में समस्या आई।')
+        alert(result.error || 'शिकायत हटाने में समस्या आई।')
       }
     } catch (e: any) {
       alert('शिकायत हटाने में समस्या आई।')
@@ -326,7 +328,7 @@ export default function AdminPage() {
         </div>
 
         {/* ── आँकड़े TAB ── */}
-        {tab === 1 && (
+        {tab === 2 && (
           <div style={{ paddingTop: 8 }}>
             {/* Summary cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
@@ -468,11 +470,25 @@ export default function AdminPage() {
                       {c.detail}
                     </p>
 
-                    <div style={{ fontSize: 13, color: 'var(--ink2)', marginBottom: 10 }}>
-                      📍 {c.mohalla} · 👤 {c.name} · 📞{' '}
-                      <a href={`tel:${c.phone}`} style={{ color: 'var(--ink)', fontWeight: 600 }}>
-                        {c.phone}
-                      </a>
+                    <div style={{ fontSize: 13, color: 'var(--ink2)', marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: '8px 14px', alignItems: 'center' }}>
+                      <span>📍 {c.mohalla}</span>
+                      <span>👤 {c.name}</span>
+                      <span>📞{' '}
+                        <a href={`tel:${c.phone}`} style={{ color: 'var(--ink)', fontWeight: 600 }}>
+                          {c.phone}
+                        </a>
+                      </span>
+                      {(c.email || (c.detail && c.detail.includes('ईमेल:'))) && (
+                        <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '2px 8px', borderRadius: 4, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span>✉️</span>
+                          <a
+                            href={`mailto:${c.email || c.detail.match(/(?:ईमेल|email)\s*:\s*([^\s\n\r]+@[^\s\n\r]+)/i)?.[1]}`}
+                            style={{ color: '#1E40AF', textDecoration: 'none' }}
+                          >
+                            {c.email || c.detail.match(/(?:ईमेल|email)\s*:\s*([^\s\n\r]+@[^\s\n\r]+)/i)?.[1]}
+                          </a>
+                        </span>
+                      )}
                     </div>
 
                     {/* Photos: Before & After */}
@@ -641,7 +657,7 @@ export default function AdminPage() {
                           padding: 0,
                         }}
                       >
-                        शिकायत हटाएं
+                        शिकायत हटाएं (डेटाबेस से डिलीट)
                       </button>
                     </div>
                   </div>
@@ -651,9 +667,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === 2 && <CitizensTab />}
-        {tab === 3 && <KhoyaTab />}
-        {tab === 4 && <BloodTab />}
+        {tab === 1 && <DainikKaryaTab />}
+        {tab === 3 && <CitizensTab />}
+        {tab === 4 && <KhoyaTab />}
+        {tab === 5 && <BloodTab />}
       </div>
     </section>
   )
@@ -1051,6 +1068,407 @@ function BloodTab() {
         </div>
       ))}
       {donors.length === 0 && <div className="empty"><b>कोई नहीं</b></div>}
+    </div>
+  )
+}
+
+function DainikKaryaTab() {
+  const [list, setList] = useState<DainikKarya[]>([])
+  const [loading, setLoading] = useState(true)
+  const [publishing, setPublishing] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  // Form inputs
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [workDate, setWorkDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [area, setArea] = useState('')
+  const [category, setCategory] = useState('सफ़ाई कार्य')
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetchList()
+  }, [])
+
+  async function fetchList() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/dainik-karya')
+      const json = await res.json()
+      if (json.ok && json.data) {
+        setList(json.data)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleFile(file: File) {
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = e => setPhotoPreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  function clearPhoto() {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function handlePublish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim() || !description.trim()) {
+      setMsg({ type: 'err', text: 'कार्य का शीर्षक और विवरण भरना आवश्यक है।' })
+      return
+    }
+
+    setPublishing(true)
+    setMsg(null)
+
+    try {
+      const fd = new FormData()
+      fd.append('title', title.trim())
+      fd.append('description', description.trim())
+      fd.append('work_date', workDate)
+      fd.append('area', area.trim())
+      fd.append('category', category)
+      if (photoFile) {
+        fd.append('photo', photoFile)
+      }
+
+      const res = await fetch('/api/dainik-karya', {
+        method: 'POST',
+        body: fd,
+      })
+      const json = await res.json()
+
+      if (res.ok && json.ok) {
+        setMsg({ type: 'ok', text: '✓ दैनिक कार्य सफलतापूर्वक प्रकाशित हुआ और नागरिकों के लिए वेब पर लाइव है!' })
+        setTitle('')
+        setDescription('')
+        setArea('')
+        clearPhoto()
+        fetchList()
+      } else {
+        setMsg({ type: 'err', text: json.error || 'दैनिक कार्य प्रकाशित करने में समस्या आई।' })
+      }
+    } catch (err: any) {
+      setMsg({ type: 'err', text: err.message || 'सर्वर से संपर्क में समस्या आई।' })
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm('क्या आप वाकई इस दैनिक कार्य रिपोर्ट को हटाना चाहते हैं?')) return
+    setDeletingId(id)
+    try {
+      const res = await fetch('/api/adm/delete-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: 'dainik_karya', id }),
+      })
+      const json = await res.json()
+      if (res.ok && json.ok) {
+        setList(prev => prev.filter(x => x.id !== id))
+      } else {
+        alert(json.error || 'हटाने में समस्या आई।')
+      }
+    } catch (e: any) {
+      alert('हटाने में समस्या आई।')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  return (
+    <div style={{ paddingTop: 8 }}>
+      {/* Top Banner with Public Link */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #FFF3E8 0%, #FFEDD5 100%)',
+          border: '1.5px solid var(--line)',
+          borderRadius: 14,
+          padding: '16px 20px',
+          marginBottom: 24,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#3A1500', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📝</span>
+            <span>दैनिक कार्य रिपोर्टिंग पोर्टल (Daily Activities)</span>
+          </div>
+          <div style={{ fontSize: 13.5, color: '#8B4513', marginTop: 3 }}>
+            यहाँ कार्य प्रकाशित करते ही वह तुरंत सभी नागरिकों को सार्वजनिक पृष्ठ पर दिखेगा।
+          </div>
+        </div>
+        <a
+          href="/dainik-karya"
+          target="_blank"
+          rel="noopener"
+          style={{
+            background: 'var(--amber)',
+            color: '#ffffff',
+            padding: '9px 18px',
+            borderRadius: 8,
+            fontSize: 13.5,
+            fontWeight: 700,
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            boxShadow: '0 2px 6px rgba(217,92,0,0.25)',
+          }}
+        >
+          <span>🌐 सार्वजनिक पृष्ठ देखें (/dainik-karya)</span>
+          <span>↗</span>
+        </a>
+      </div>
+
+      {/* Messages */}
+      {msg && (
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: 8,
+            marginBottom: 20,
+            fontWeight: 600,
+            fontSize: 14,
+            background: msg.type === 'ok' ? '#ECFDF5' : '#FEF2F2',
+            color: msg.type === 'ok' ? '#065F46' : '#991B1B',
+            border: `1.5px solid ${msg.type === 'ok' ? '#A7F3D0' : '#FECACA'}`,
+          }}
+        >
+          {msg.text}
+        </div>
+      )}
+
+      {/* Publish Form */}
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: 16,
+          border: '1px solid var(--line)',
+          padding: '22px 24px',
+          marginBottom: 32,
+          boxShadow: '0 2px 12px rgba(217,92,0,0.06)',
+        }}
+      >
+        <h3 style={{ margin: '0 0 16px', fontSize: 17, color: 'var(--ink)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>+</span>
+          <span>नया दैनिक कार्य जोड़ें (Publish Daily Work)</span>
+        </h3>
+
+        <form onSubmit={handlePublish}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 14 }}>
+            <div className="f" style={{ margin: 0 }}>
+              <label>कार्य की तारीख़ (Date) <strong style={{ color: '#DC2626' }}>*</strong></label>
+              <input
+                type="date"
+                value={workDate}
+                onChange={e => setWorkDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="f" style={{ margin: 0 }}>
+              <label>कार्य श्रेणी (Category) <strong style={{ color: '#DC2626' }}>*</strong></label>
+              <select value={category} onChange={e => setCategory(e.target.value)}>
+                <option value="सफ़ाई कार्य">सफ़ाई कार्य</option>
+                <option value="सड़क मरम्मत">सड़क मरम्मत</option>
+                <option value="स्ट्रीट लाइट">स्ट्रीट लाइट</option>
+                <option value="पेयजल">पेयजल</option>
+                <option value="निरीक्षण / जनसुनवाई">निरीक्षण / जनसुनवाई</option>
+                <option value="विकास कार्य">विकास कार्य</option>
+                <option value="अन्य">अन्य</option>
+              </select>
+            </div>
+
+            <div className="f" style={{ margin: 0 }}>
+              <label>मोहल्ला / क्षेत्र (Area)</label>
+              <input
+                type="text"
+                value={area}
+                onChange={e => setArea(e.target.value)}
+                placeholder="उदा. कल्पतरु रोड, माता का थान"
+              />
+            </div>
+          </div>
+
+          <div className="f" style={{ marginBottom: 14 }}>
+            <label>कार्य का शीर्षक (Title) <strong style={{ color: '#DC2626' }}>*</strong></label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="उदा. मुख्य सड़क एवं गलियों में विशेष सफ़ाई अभियान व कचरा उठाव"
+              required
+            />
+          </div>
+
+          <div className="f" style={{ marginBottom: 14 }}>
+            <label>कार्य का पूरा विवरण (Details) <strong style={{ color: '#DC2626' }}>*</strong></label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="विस्तार से लिखें कि आज क्या काम किया गया, कितने कर्मचारी लगे, मौके पर क्या स्थिति है..."
+              required
+            />
+          </div>
+
+          {/* Photo input */}
+          <div className="f" style={{ marginBottom: 20 }}>
+            <label>कार्य की फ़ोटो (प्रमाण तस्वीर - ऐच्छिक पर अनुशंसित)</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+            />
+
+            {!photoPreview ? (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="s-btn btn-wip"
+                  onClick={() => fileRef.current?.click()}
+                  style={{ width: 'fit-content', padding: '8px 16px' }}
+                >
+                  📷 फ़ोटो खींचिए या गैलरी से चुनिए
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 8 }}>
+                <img
+                  src={photoPreview}
+                  alt="preview"
+                  style={{ maxHeight: 140, borderRadius: 8, border: '1.5px solid var(--line)', objectFit: 'cover' }}
+                />
+                <button
+                  type="button"
+                  onClick={clearPhoto}
+                  style={{
+                    background: '#FEE2E2',
+                    color: '#DC2626',
+                    border: '1px solid #FCA5A5',
+                    borderRadius: 6,
+                    padding: '6px 12px',
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✕ फ़ोटो हटाएं
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="btn"
+            disabled={publishing}
+            style={{ width: 'fit-content', padding: '12px 28px', fontSize: 15 }}
+          >
+            {publishing ? 'प्रकाशित हो रहा है…' : '✓ दैनिक कार्य प्रकाशित करें'}
+          </button>
+        </form>
+      </div>
+
+      {/* Existing daily activities */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: 17, color: 'var(--ink)', fontWeight: 800 }}>
+            📋 पूर्व प्रकाशित दैनिक कार्य ({list.length})
+          </h3>
+          <button
+            type="button"
+            onClick={fetchList}
+            style={{ fontSize: 13, color: 'var(--amber)', fontWeight: 700, cursor: 'pointer' }}
+          >
+            🔄 रीफ़्रेश करें
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="empty"><b>दैनिक कार्य लोड हो रहे हैं…</b></div>
+        ) : list.length === 0 ? (
+          <div className="empty">
+            <b>अभी कोई दैनिक कार्य प्रकाशित नहीं है।</b>
+            <p>ऊपर दिए गए फ़ॉर्म से पहला दैनिक कार्य जोड़ें।</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {list.map(item => (
+              <div key={item.id} className="admrow" style={{ padding: '18px 20px' }}>
+                <div className="admtop" style={{ alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', background: 'var(--amber-s)', padding: '2px 8px', borderRadius: 4 }}>
+                        📅 {new Date(item.work_date).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      <span className="pill" style={{ background: 'var(--surface)', color: 'var(--ink)' }}>
+                        {item.category}
+                      </span>
+                      {item.area && (
+                        <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 600 }}>
+                          📍 {item.area}
+                        </span>
+                      )}
+                    </div>
+                    <strong style={{ fontSize: 16, color: 'var(--ink)' }}>{item.title}</strong>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={deletingId === item.id}
+                    onClick={() => handleDelete(item.id)}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    {deletingId === item.id ? 'हटाया जा रहा है…' : 'हटाएं'}
+                  </button>
+                </div>
+
+                <p style={{ margin: '8px 0 10px', fontSize: 14, color: '#374151', lineHeight: 1.55 }}>
+                  {item.description}
+                </p>
+
+                {item.photo_url && (
+                  <div style={{ marginTop: 8 }}>
+                    <img
+                      src={item.photo_url}
+                      alt={item.title}
+                      onClick={() => window.open(item.photo_url!, '_blank')}
+                      style={{
+                        maxHeight: 120,
+                        borderRadius: 8,
+                        border: '1.5px solid var(--line)',
+                        cursor: 'pointer',
+                        objectFit: 'cover',
+                      }}
+                      title="बड़ा देखने के लिए क्लिक करें"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

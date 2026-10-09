@@ -17,6 +17,7 @@ export type Shikayat = {
   code: string
   name: string
   phone: string
+  email?: string | null
   mohalla: string
   category: string
   detail: string
@@ -27,6 +28,17 @@ export type Shikayat = {
   admin_note: string | null
   created_at: string
   updated_at: string | null
+}
+
+export type DainikKarya = {
+  id: number
+  title: string
+  description: string
+  work_date: string
+  area: string | null
+  category: string
+  photo_url: string | null
+  created_at: string
 }
 
 export type KhoyaPaya = {

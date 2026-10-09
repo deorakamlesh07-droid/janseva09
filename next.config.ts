@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      { source: '/kary', destination: '/dainik-karya', permanent: true },
+      { source: '/karya', destination: '/dainik-karya', permanent: true },
+      { source: '/dainik-kary', destination: '/dainik-karya', permanent: true },
+    ]
+  },
 }
 
 export default nextConfig

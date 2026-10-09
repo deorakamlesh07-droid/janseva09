@@ -4,6 +4,7 @@ interface ComplaintEmailProps {
   code: string
   name: string
   phone: string
+  email?: string | null
   mohalla: string
   category: string
   detail: string
@@ -13,14 +14,32 @@ interface ComplaintEmailProps {
   createdAt?: string
 }
 
-export async function sendComplaintNotificationEmail(props: ComplaintEmailProps) {
-  const { code, name, phone, mohalla, category, detail, photo_url, latitude, longitude } = props
-
-  const toEmail = process.env.SANCHALAK_EMAIL || process.env.SMTP_USER || ''
+function getMailTransporter() {
   const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com'
   const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10)
   const smtpUser = process.env.SMTP_USER || ''
   const smtpPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '')
+
+  if (!smtpUser || !smtpPass) return null
+
+  return smtpHost.includes('gmail')
+    ? nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: smtpUser, pass: smtpPass },
+      })
+    : nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPass },
+      })
+}
+
+export async function sendComplaintNotificationEmail(props: ComplaintEmailProps) {
+  const { code, name, phone, email, mohalla, category, detail, photo_url, latitude, longitude } = props
+
+  const toEmail = process.env.SANCHALAK_EMAIL || process.env.SMTP_USER || ''
+  const smtpUser = process.env.SMTP_USER || ''
   const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -29,30 +48,13 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
     return { ok: false, message: 'संचालक ईमेल सेट नहीं है।' }
   }
 
-  if (!smtpUser || !smtpPass) {
+  const transporter = getMailTransporter()
+  if (!transporter) {
     console.log(`[Mailer] सूचना: SMTP क्रेडेंशियल (SMTP_USER / SMTP_PASS) .env.local में सेट नहीं हैं। नई शिकायत: ${code} - ${name} (${phone})`)
     return { ok: false, message: 'SMTP क्रेडेंशियल सेट नहीं हैं।' }
   }
 
   try {
-    const transporter = smtpHost.includes('gmail')
-      ? nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        })
-      : nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass,
-          },
-        })
-
     const codeSlug = code.replace('/', '-')
     const publicUrl = `${appUrl}/s/${codeSlug}`
     const admUrl = `${appUrl}/adm`
@@ -81,6 +83,16 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
                 <a href="tel:${phone}" style="color: #2563eb; text-decoration: none;">${phone}</a>
               </td>
             </tr>
+            ${
+              email
+                ? `<tr>
+              <td style="padding: 8px 0; color: #6b7280;">ईमेल पता:</td>
+              <td style="padding: 8px 0; color: #111827; font-weight: 600;">
+                <a href="mailto:${email}" style="color: #2563eb; text-decoration: none;">${email}</a>
+              </td>
+            </tr>`
+                : ''
+            }
             <tr>
               <td style="padding: 8px 0; color: #6b7280;">मोहल्ला / क्षेत्र:</td>
               <td style="padding: 8px 0; color: #111827; font-weight: 600;">${mohalla}</td>
@@ -140,7 +152,7 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
 
 नागरिक का नाम: ${name}
 मोबाइल नंबर: ${phone}
-मोहल्ला: ${mohalla}
+${email ? `ईमेल पता: ${email}\n` : ''}मोहल्ला: ${mohalla}
 शिकायत श्रेणी: ${category}
 
 विवरण:
@@ -159,10 +171,166 @@ ${photo_url ? `फ़ोटो लिंक: ${photo_url}\n` : ''}
       html: htmlContent,
     })
 
-    console.log(`[Mailer] ईमेल सफलता से भेजा गया: ${info.messageId} to ${toEmail}`)
+    console.log(`[Mailer] संचालक ईमेल भेजा गया: ${info.messageId} to ${toEmail}`)
     return { ok: true, messageId: info.messageId }
   } catch (err: any) {
-    console.error('[Mailer] ईमेल भेजने में त्रुटि:', err)
+    console.error('[Mailer] संचालक ईमेल भेजने में त्रुटि:', err)
+    return { ok: false, error: err.message }
+  }
+}
+
+export interface ComplaintResolvedEmailProps {
+  code: string
+  name: string
+  toEmail: string
+  category: string
+  mohalla: string
+  detail: string
+  admin_note?: string | null
+  after_photo_url?: string | null
+  photo_url?: string | null
+}
+
+export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailProps) {
+  const { code, name, toEmail, category, mohalla, detail, admin_note, after_photo_url, photo_url } = props
+
+  if (!toEmail || !toEmail.includes('@')) {
+    console.log(`[Mailer] शिकायतकर्ता ईमेल अनुपलब्ध है (${code}). समाधान ईमेल नहीं भेजा गया।`)
+    return { ok: false, message: 'ईमेल पता नहीं दिया गया है।' }
+  }
+
+  const transporter = getMailTransporter()
+  if (!transporter) {
+    console.log(`[Mailer] SMTP क्रेडेंशियल सेट नहीं हैं। समाधान ईमेल नहीं भेजा जा सका (${code} -> ${toEmail})`)
+    return { ok: false, message: 'SMTP क्रेडेंशियल सेट नहीं हैं।' }
+  }
+
+  const smtpUser = process.env.SMTP_USER || ''
+  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const codeSlug = code.replace('/', '-')
+  const publicUrl = `${appUrl}/s/${codeSlug}`
+
+  try {
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+        <!-- Top Header -->
+        <div style="background: linear-gradient(135deg, #065f46 0%, #047857 60%, #059669 100%); padding: 26px 28px; color: #ffffff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: 700; color: #a7f3d0; text-transform: uppercase; letter-spacing: 0.8px;">वार्ड 09 · जनसेवा समाधान</span>
+            <span style="background: rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px;">✓ कार्य पूर्ण</span>
+          </div>
+          <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 800; line-height: 1.3;">आपकी शिकायत का समाधान हो गया है!</h1>
+          <div style="margin-top: 10px; display: inline-block; background: #ffffff; color: #065f46; font-weight: 800; padding: 4px 14px; border-radius: 6px; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            शिकायत कोड: ${code}
+          </div>
+        </div>
+
+        <!-- Main Body -->
+        <div style="padding: 28px;">
+          <p style="font-size: 15.5px; line-height: 1.6; color: #1f2937; margin: 0 0 18px 0;">
+            नमस्ते <strong>${name} जी</strong>,<br>
+            वार्ड 09 संचालक टीम द्वारा आपकी शिकायत का समाधान सफलतापूर्वक कर दिया गया है।
+          </p>
+
+          <!-- Status Box -->
+          <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;">
+            <div style="font-size: 13px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">स्थिति अपडेट</div>
+            <div style="font-size: 18px; font-weight: 800; color: #15803d; display: flex; align-items: center; gap: 8px;">
+              ✓ काम पूरा हो गया (Resolved)
+            </div>
+            ${
+              admin_note
+                ? `<div style="font-size: 13.5px; color: #166534; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #bbf7d0;">
+                <strong>संचालक टिप्पणी / समय:</strong> ${admin_note}
+              </div>`
+                : ''
+            }
+          </div>
+
+          <!-- Complaint Details Table -->
+          <h2 style="font-size: 15px; margin: 0 0 12px 0; color: #374151; border-bottom: 2px solid #f3f4f6; padding-bottom: 6px;">शिकायत का संक्षिप्त विवरण</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280; width: 130px;">शिकायत श्रेणी:</td>
+              <td style="padding: 7px 0; color: #111827; font-weight: 700;">${category}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280;">मोहल्ला / क्षेत्र:</td>
+              <td style="padding: 7px 0; color: #111827; font-weight: 600;">${mohalla}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280; vertical-align: top;">मूल समस्या:</td>
+              <td style="padding: 7px 0; color: #374151; font-size: 13.5px; line-height: 1.5;">${detail}</td>
+            </tr>
+          </table>
+
+          <!-- Photos Comparison -->
+          ${
+            after_photo_url
+              ? `
+            <div style="margin: 22px 0; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+              <h3 style="font-size: 14px; margin: 0 0 10px 0; color: #047857; font-weight: 700;">
+                ✓ समाधान प्रमाण (काम के बाद की तस्वीर):
+              </h3>
+              <a href="${after_photo_url}" target="_blank">
+                <img src="${after_photo_url}" alt="समाधान फ़ोटो" style="max-width: 100%; height: auto; max-height: 280px; border-radius: 8px; border: 1.5px solid #10b981; object-fit: cover;" />
+              </a>
+            </div>
+          `
+              : ''
+          }
+
+          <!-- View Action Button -->
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="${publicUrl}" target="_blank" style="background: #047857; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 3px 8px rgba(4,120,87,0.3);">
+              पोर्टल पर पूरी स्थिति देखें →
+            </a>
+          </div>
+
+          <div style="margin-top: 26px; padding-top: 16px; border-top: 1px solid #f3f4f6; font-size: 13px; color: #6b7280; line-height: 1.5;">
+            वार्ड 09 को स्वच्छ और बेहतर बनाने में आपके सहयोग के लिए धन्यवाद।<br>
+            यदि आपको कोई और समस्या है, तो आप कभी भी <a href="${appUrl}/new" style="color: #047857; font-weight: 600;">नया आवेदन / शिकायत दर्ज</a> कर सकते हैं।
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
+          वार्ड 09 जनसेवा · संजय बिश्नोई (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
+        </div>
+      </div>
+    `
+
+    const textContent = `
+वार्ड मित्र 09 · समाधान सूचना
+नमस्ते ${name} जी,
+
+आपकी शिकायत (कोड: ${code}) का समाधान सफलता से कर दिया गया है!
+
+स्थिति: काम पूरा (Resolved)
+${admin_note ? `संचालक टिप्पणी / समय: ${admin_note}\n` : ''}
+शिकायत श्रेणी: ${category}
+मोहल्ला: ${mohalla}
+
+पोर्टल पर स्थिति देखें: ${publicUrl}
+${after_photo_url ? `समाधान फ़ोटो प्रमाण: ${after_photo_url}\n` : ''}
+
+वार्ड 09 को स्वच्छ व बेहतर बनाने में आपके सहयोग के लिए धन्यवाद।
+— वार्ड 09 जनसेवा
+    `
+
+    const info = await transporter.sendMail({
+      from: smtpFrom,
+      to: toEmail,
+      subject: `[वार्ड मित्र 09] आपकी शिकायत का समाधान हो गया है — कोड: ${code}`,
+      text: textContent,
+      html: htmlContent,
+    })
+
+    console.log(`[Mailer] शिकायतकर्ता समाधान ईमेल भेजा गया: ${info.messageId} to ${toEmail} for ${code}`)
+    return { ok: true, messageId: info.messageId }
+  } catch (err: any) {
+    console.error(`[Mailer] शिकायतकर्ता को ईमेल भेजने में त्रुटि (${toEmail}):`, err)
     return { ok: false, error: err.message }
   }
 }

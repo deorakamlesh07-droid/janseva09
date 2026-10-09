@@ -33,6 +33,8 @@ tsconfig.tsbuildinfo
 npm-debug.log*
 *.log
 
-# Editor
+# Editor & Scratch
 .vscode/
 .idea/
+scratch/
+data/

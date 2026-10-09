@@ -186,6 +186,22 @@ function NewComplaintForm() {
           </div>
 
           <div className="f">
+            <label htmlFor="a-email" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>{t('ईमेल पता')} <strong style={{ color: '#DC2626' }}>{t('* (अनिवार्य)')}</strong></span>
+              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{t('समाधान पर ईमेल आएगा')}</span>
+            </label>
+            <input
+              id="a-email"
+              name="email"
+              type="email"
+              maxLength={100}
+              placeholder={t('जैसे — rahul@gmail.com')}
+              required
+            />
+            <div className="hint">{t('शिकायत का समाधान होने पर तुरंत आपको इस ईमेल पर सूचना भेजी जाएगी।')}</div>
+          </div>
+
+          <div className="f">
             <label htmlFor="a3">{t('पता / मोहल्ला')}</label>
             <input
               id="a3"
