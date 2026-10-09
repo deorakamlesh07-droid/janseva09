@@ -1,5 +1,19 @@
 import nodemailer from 'nodemailer'
 
+/** Resolves the correct public app URL in both local dev and Vercel production */
+function getAppUrl(): string {
+  // 1. Explicit override (set in Vercel env vars or .env.local)
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
+  }
+  // 2. Vercel automatically sets VERCEL_URL (no https prefix) in production/preview
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  // 3. Local fallback
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+}
+
 interface ComplaintEmailProps {
   code: string
   name: string
@@ -41,7 +55,7 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
   const toEmail = process.env.SANCHALAK_EMAIL || process.env.SMTP_USER || ''
   const smtpUser = process.env.SMTP_USER || ''
   const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = getAppUrl()
 
   if (!toEmail) {
     console.log(`[Mailer] सूचना: संचालक ईमेल (SANCHALAK_EMAIL) सेट नहीं है।`)
@@ -207,7 +221,7 @@ export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailPr
 
   const smtpUser = process.env.SMTP_USER || ''
   const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = getAppUrl()
   const codeSlug = code.replace('/', '-')
   const publicUrl = `${appUrl}/s/${codeSlug}`
 
@@ -361,7 +375,7 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
 
   const smtpUser = process.env.SMTP_USER || ''
   const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = getAppUrl()
   const codeSlug = code.replace('/', '-')
   const publicUrl = `${appUrl}/s/${codeSlug}`
 
