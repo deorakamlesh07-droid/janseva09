@@ -1,5 +1,10 @@
 import nodemailer from 'nodemailer'
 
+/** New format J001 has no slash — use as-is. Legacy 09/1 → 09-1 for URL slug. */
+function toCodeSlug(code: string): string {
+  return /^[A-Z]\d{3}$/.test(code) ? code : code.replace('/', '-')
+}
+
 /** Resolves the correct public app URL in both local dev and Vercel production */
 function getAppUrl(): string {
   // 1. Explicit override (set in Vercel env vars or .env.local)
@@ -69,7 +74,7 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
   }
 
   try {
-    const codeSlug = code.replace('/', '-')
+    const codeSlug = toCodeSlug(code)
     const publicUrl = `${appUrl}/s/${codeSlug}`
     const admUrl = `${appUrl}/adm`
 
@@ -222,7 +227,7 @@ export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailPr
   const smtpUser = process.env.SMTP_USER || ''
   const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
   const appUrl = getAppUrl()
-  const codeSlug = code.replace('/', '-')
+  const codeSlug = toCodeSlug(code)
   const publicUrl = `${appUrl}/s/${codeSlug}`
 
   try {

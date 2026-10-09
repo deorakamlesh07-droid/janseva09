@@ -15,16 +15,74 @@ async function sendSafe(label: string, promise: Promise<any>, timeoutMs = 8000) 
   }
 }
 
+/**
+ * Generates the next unique complaint code in format: 1 LETTER + 3 DIGITS
+ * e.g. J001, J002 ... J999, K001, K002 ... Z999
+ * Starting letter: J (for JanSeva). Always checks DB for uniqueness.
+ */
 async function getNextCode(): Promise<string> {
   const supabase = getServiceClient()
+
+  // Fetch all existing codes that match the new format [A-Z][0-9]{3}
   const { data } = await supabase
     .from('shikayat')
     .select('code')
     .order('id', { ascending: false })
-    .limit(1)
-  if (!data || data.length === 0) return '09/1'
-  const last = parseInt(data[0].code.split('/')[1], 10) || 0
-  return `09/${last + 1}`
+
+  const existingCodes = new Set((data || []).map((r: any) => r.code))
+
+  // Find codes matching new format
+  const newFormatCodes = [...existingCodes].filter(c => /^[A-Z]\d{3}$/.test(c))
+
+  if (newFormatCodes.length === 0) {
+    // No new-format codes yet — start fresh from J001
+    return 'J001'
+  }
+
+  // Parse all new-format codes and find the max
+  let maxLetter = 'J'
+  let maxNum = 0
+
+  for (const c of newFormatCodes) {
+    const letter = c[0]
+    const num = parseInt(c.slice(1), 10)
+    if (
+      letter > maxLetter ||
+      (letter === maxLetter && num > maxNum)
+    ) {
+      maxLetter = letter
+      maxNum = num
+    }
+  }
+
+  // Increment
+  if (maxNum < 999) {
+    // Same letter, next number
+    const nextNum = (maxNum + 1).toString().padStart(3, '0')
+    const candidate = `${maxLetter}${nextNum}`
+    if (!existingCodes.has(candidate)) return candidate
+  }
+
+  // Roll to next letter
+  const nextLetter = String.fromCharCode(maxLetter.charCodeAt(0) + 1)
+  if (nextLetter > 'Z') {
+    // Extremely unlikely — fallback to timestamp-based unique code
+    const fallback = `X${Date.now().toString().slice(-3)}`
+    return fallback
+  }
+  const candidate = `${nextLetter}001`
+  if (!existingCodes.has(candidate)) return candidate
+
+  // Final safety: scan for first available slot
+  for (let l = 'J'.charCodeAt(0); l <= 'Z'.charCodeAt(0); l++) {
+    for (let n = 1; n <= 999; n++) {
+      const code = `${String.fromCharCode(l)}${n.toString().padStart(3, '0')}`
+      if (!existingCodes.has(code)) return code
+    }
+  }
+
+  // Should never reach here
+  return `J${Date.now().toString().slice(-3)}`
 }
 
 export async function POST(req: NextRequest) {
@@ -118,7 +176,6 @@ export async function POST(req: NextRequest) {
     // Await both emails before returning the response.
     // CRITICAL: In Vercel serverless, floating .catch() promises are killed the
     // instant NextResponse is returned — emails would silently never send.
-    // Using sendSafe() ensures errors are caught and logged, not thrown.
     await Promise.all([
       // 1. Admin notification → Sanchalak
       sendSafe('Sanchalak notification', sendComplaintNotificationEmail({

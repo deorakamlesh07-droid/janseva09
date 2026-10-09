@@ -16,9 +16,17 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long' })
 }
 
+/** Resolves URL slug to DB code — handles both new format (J001) and legacy (09-N → 09/N) */
+function resolveCode(slug: string): string {
+  // New format: single letter + 3 digits — no conversion needed
+  if (/^[A-Z]\d{3}$/.test(slug)) return slug
+  // Legacy format: 09-1 → 09/1
+  return slug.replace('-', '/')
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
-  const realCode = code.replace('-', '/')
+  const realCode = resolveCode(code)
   try {
     const supabase = getServiceClient()
     const { data } = await supabase.from('shikayat').select('detail').eq('code', realCode).single()
@@ -30,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 
 export default async function ShikayatDetail({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
-  const realCode = code.replace('-', '/')
+  const realCode = resolveCode(code)
 
   let c: Shikayat | null = null
   try {
