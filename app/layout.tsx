@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import NavClient from './NavClient'
 import CapacitorBridge from './CapacitorBridge'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = {
   title: 'जनसेवा — वार्ड 09, जोधपुर का अपना रजिस्टर',
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CapacitorBridge />
         <NavClient />
         {children}
+        <Analytics />
         <footer className="ft">
           <div className="wrap">
             <span>
