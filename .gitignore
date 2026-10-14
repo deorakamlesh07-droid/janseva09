@@ -17,6 +17,7 @@ android/build/
 android/.idea/
 *.apk
 *.aab
+!public/*.apk
 
 # OS files
 .DS_Store

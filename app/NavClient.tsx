@@ -221,6 +221,23 @@ export default function NavClient() {
               </button>
             )}
 
+            {/* Direct APK Download Button */}
+            {!isApk && (
+              <a
+                className="apk-dl-btn"
+                href="/janseva09.apk"
+                download="janseva09.apk"
+                title="एंड्रॉइड ऐप डाउनलोड करें"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>ऐप डाउनलोड</span>
+              </a>
+            )}
+
             <a className="emg" href="/numbers" title="आपातकालीन नंबर">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <path d="M12 9v4" />
@@ -298,6 +315,22 @@ export default function NavClient() {
               </svg>
               <span>पेज रिफ्रेश करें</span>
             </button>
+          )}
+
+          {!isApk && (
+            <a
+              href="/janseva09.apk"
+              download="janseva09.apk"
+              className="slidebar-apk-btn"
+              onClick={() => setIsOpen(false)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>📲 एंड्रॉइड ऐप डाउनलोड करें</span>
+            </a>
           )}
 
           <a

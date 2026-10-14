@@ -79,6 +79,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .emg{display:flex;align-items:center;gap:7px;background:#fff;color:#C33B2E;padding:8px 14px;border-radius:9px;font-size:14px;font-weight:700;flex:none;box-shadow:0 2px 8px rgba(0,0,0,0.15);transition:transform 0.15s ease}
 .emg:hover{transform:translateY(-1px)}
 .emg svg{width:15px;height:15px}
+.apk-dl-btn{display:flex;align-items:center;gap:6px;background:#fff;color:#15803D;padding:8px 13px;border-radius:9px;font-size:13.5px;font-weight:700;flex:none;box-shadow:0 2px 8px rgba(0,0,0,0.15);transition:all 0.15s ease;text-decoration:none}
+.apk-dl-btn:hover{transform:translateY(-1px);background:#F0FDF4}
+.apk-dl-btn svg{width:15px;height:15px}
 
 .mobile-slidebar-backdrop{
   display:none;
@@ -151,6 +154,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   }
   
   .emg{
+    padding:6px 10px;
+    font-size:12px;
+    gap:4px;
+  }
+  .apk-dl-btn{
     padding:6px 10px;
     font-size:12px;
     gap:4px;
@@ -329,6 +337,29 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
     background:#FAFAFA;
     flex:none;
   }
+  .slidebar-apk-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:11px 14px;
+    background:#DCFCE7;
+    color:#15803D;
+    border:1.5px solid #86EFAC;
+    border-radius:10px;
+    font-size:13.5px;
+    font-weight:700;
+    text-decoration:none;
+    margin-bottom:8px;
+  }
+  .slidebar-apk-btn:active{
+    background:#BBF7D0;
+  }
+  .slidebar-apk-btn svg{
+    width:16px;
+    height:16px;
+  }
   .slidebar-emg-btn{
     display:flex;
     align-items:center;
@@ -433,6 +464,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   
   .emg{padding:6px 8px;font-size:11px}
   .emg span{display:none}
+  .apk-dl-btn{padding:6px 8px;font-size:11px}
+  .apk-dl-btn span{display:none}
 }
 
 
