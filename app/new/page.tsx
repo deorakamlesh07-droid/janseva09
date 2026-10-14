@@ -64,7 +64,6 @@ function NewComplaintForm() {
   const [success, setSuccess] = useState('')
   const [mohallaValue, setMohallaValue] = useState('')
   const cameraRef = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (catQuery) {
@@ -119,8 +118,18 @@ function NewComplaintForm() {
     e.preventDefault()
 
     if (photos.length === 0) {
-      setError('फ़ोटो लगाना अनिवार्य है! कम से कम 1 फ़ोटो खींचकर जोड़ें।')
+      setError('फ़ोटो लगाना अनिवार्य है! कम से कम 1 समस्या की फ़ोटो कैमरे से खींचकर जोड़ें।')
       document.getElementById('photo-section')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+
+    const fd = new FormData(e.currentTarget)
+    const lat = (fd.get('latitude') as string || '').trim()
+    const lng = (fd.get('longitude') as string || '').trim()
+
+    if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
+      setError('शिकायत दर्ज करने के लिए वर्तमान लोकेशन (GPS/नक्शा) अनिवार्य है! कृपया "मेरी वर्तमान लोकेशन प्राप्त करें" दबाएँ या नक्शे पर स्थान चुनें।')
+      document.getElementById('location-section')?.scrollIntoView({ behavior: 'smooth' })
       return
     }
 
@@ -128,7 +137,6 @@ function NewComplaintForm() {
     setError('')
     setSuccess('')
 
-    const fd = new FormData(e.currentTarget)
     fd.delete('photo')
     fd.delete('photos[]')
 
@@ -201,43 +209,24 @@ function NewComplaintForm() {
               style={{ display: 'none' }}
               onChange={e => handleFiles(e.target.files)}
             />
-            <input
-              type="file"
-              ref={galleryRef}
-              accept="image/*"
-              multiple
-              style={{ display: 'none' }}
-              onChange={e => handleFiles(e.target.files)}
-            />
 
             {photos.length < MAX_PHOTOS && (
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{ marginBottom: 12 }}>
                 <button
                   type="button"
                   className="drop"
-                  style={{ flex: 1, minWidth: 160 }}
+                  style={{ width: '100%' }}
                   onClick={() => cameraRef.current?.click()}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
                     <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4Z" />
                     <circle cx="12" cy="13" r="3.5" />
                   </svg>
-                  <b>{'कैमरा खोलिए'}</b>
-                  <span>{photos.length > 0 ? 'दूसरी फ़ोटो खींचिए' : 'मौके से लाइव फ़ोटो खींचिए'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="galbtn"
-                  style={{ flex: 1, minWidth: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, margin: 0 }}
-                  onClick={() => galleryRef.current?.click()}
-                >
-                  <span>🖼️</span>
-                  <span>{'गैलरी से चुनिए'}</span>
+                  <b>कैमरा खोलिए</b>
+                  <span>{photos.length > 0 ? 'दूसरी फ़ोटो कैमरे से खींचिए' : 'मौके से लाइव फ़ोटो खींचिए (गैलरी अनुमत नहीं)'}</span>
                 </button>
               </div>
             )}
-
             {photos.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: 10, marginBottom: 12 }}>
                 {photos.map((item, idx) => (
