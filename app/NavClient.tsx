@@ -232,6 +232,7 @@ export default function NavClient() {
           </div>
         </div>
       </nav>
+      <div className="nav-spacer" aria-hidden="true" />
 
       {/* Mobile Slidebar Backdrop */}
       <div
