@@ -43,10 +43,19 @@ export default async function ShikayatDetail({ params }: { params: Promise<{ cod
   let c: Shikayat | null = null
   try {
     const supabase = getServiceClient()
-    const publicCols = 'id, code, mohalla, category, detail, photo_url, photo_urls, after_photo_url, status, deadline, admin_note, created_at, updated_at'
-    const { data } = await supabase.from('shikayat').select(publicCols).eq('code', realCode).single()
-    c = data as Shikayat
-  } catch { /* fall through */ }
+    const publicColsWith = 'id, code, mohalla, category, detail, photo_url, photo_urls, after_photo_url, status, deadline, admin_note, created_at, updated_at'
+    const { data, error } = await supabase.from('shikayat').select(publicColsWith).eq('code', realCode).single()
+    if (error) {
+      // Fallback: If photo_urls column is not in DB yet, query standard columns
+      const publicColsFallback = 'id, code, mohalla, category, detail, photo_url, after_photo_url, status, deadline, admin_note, created_at, updated_at'
+      const { data: fbData } = await supabase.from('shikayat').select(publicColsFallback).eq('code', realCode).single()
+      c = fbData as Shikayat
+    } else {
+      c = data as Shikayat
+    }
+  } catch (err) {
+    console.error('[ShikayatDetail] Error loading complaint:', err)
+  }
 
   if (!c) notFound()
 

@@ -155,11 +155,22 @@ export async function POST(req: NextRequest) {
 
     // If removing complaint: Permanently delete row from database
     if (status === 'हटाई' || action === 'delete') {
-      const { data: existing } = await supabase
+      let existing: any = null
+      const { data: exData, error: exErr } = await supabase
         .from('shikayat')
         .select('code, photo_url, photo_urls, after_photo_url')
         .eq('id', id)
         .single()
+      if (exErr) {
+        const { data: fb } = await supabase
+          .from('shikayat')
+          .select('code, photo_url, after_photo_url')
+          .eq('id', id)
+          .single()
+        existing = fb
+      } else {
+        existing = exData
+      }
 
       if (existing) {
         // Collect all photo paths to remove from storage
@@ -251,11 +262,22 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'शिकायत ID आवश्यक है।' }, { status: 400 })
 
     const supabase = getServiceClient()
-    const { data: existing } = await supabase
+    let existing: any = null
+    const { data: exData, error: exErr } = await supabase
       .from('shikayat')
       .select('code, photo_url, photo_urls, after_photo_url')
       .eq('id', id)
       .single()
+    if (exErr) {
+      const { data: fb } = await supabase
+        .from('shikayat')
+        .select('code, photo_url, after_photo_url')
+        .eq('id', id)
+        .single()
+      existing = fb
+    } else {
+      existing = exData
+    }
 
     if (existing) {
       const urlsToDelete: (string | null)[] = [

@@ -29,11 +29,22 @@ export async function POST(req: NextRequest) {
     const supabase = getServiceClient()
 
     if (table === 'shikayat') {
-      const { data: existing } = await supabase
+      let existing: any = null
+      const { data: exData, error: exErr } = await supabase
         .from('shikayat')
         .select('code, photo_url, photo_urls, after_photo_url')
         .eq('id', id)
         .single()
+      if (exErr) {
+        const { data: fb } = await supabase
+          .from('shikayat')
+          .select('code, photo_url, after_photo_url')
+          .eq('id', id)
+          .single()
+        existing = fb
+      } else {
+        existing = exData
+      }
 
       if (existing) {
         const marker = '/photos/'

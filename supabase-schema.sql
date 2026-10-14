@@ -24,6 +24,7 @@ create table if not exists shikayat (
 
 -- Ensure all columns exist even if table was already created
 alter table shikayat add column if not exists email text;
+alter table shikayat add column if not exists photo_urls text[];
 alter table shikayat add column if not exists updated_at timestamptz not null default now();
 
 -- 2. Lost & Found Table (खोया-पाया)
