@@ -36,20 +36,28 @@ interface ComplaintEmailProps {
 
 function getMailTransporter() {
   const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com'
-  const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10)
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10)
   const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
   const smtpPass = (process.env.SMTP_PASS || 'vcowjybhpafxeugt').replace(/\s+/g, '')
 
   if (!smtpUser || !smtpPass) return null
 
+  // Port 465 → implicit SSL (secure: true)
+  // Port 587 → STARTTLS (secure: false + requireTLS: true)
+  const useSSL = smtpPort === 465
+
   return nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
-    secure: smtpPort === 465,
+    secure: useSSL,
+    ...(useSSL ? {} : { requireTLS: true }),
     auth: { user: smtpUser, pass: smtpPass },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false, // prevents silent drops on some receiving servers
+    },
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
   })
 }
 
@@ -58,7 +66,7 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
 
   const toEmail = process.env.SANCHALAK_EMAIL || process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
   const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
+  const smtpFrom = process.env.SMTP_FROM || `"जनसेवा 09" <${smtpUser}>`
   const appUrl = getAppUrl()
 
   if (!toEmail) {
@@ -80,7 +88,7 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
     const htmlContent = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
         <div style="background: #111827; padding: 24px 28px; color: #ffffff;">
-          <div style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">वार्ड मित्र 08 · संचालक सूचना</div>
+          <div style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">जनसेवा 09 · संचालक सूचना</div>
           <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.3;">नई नागरिक शिकायत प्राप्त हुई</h1>
           <div style="margin-top: 10px; display: inline-block; background: #f59e0b; color: #111827; font-weight: 800; padding: 4px 12px; border-radius: 6px; font-size: 15px;">
             कोड: ${code}
@@ -165,13 +173,13 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
         </div>
 
         <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
-          यह ईमेल वार्ड मित्र 08 शिकायत रजिस्टर प्रणाली द्वारा स्वतः भेजा गया है।
+          यह ईमेल जनसेवा 09 शिकायत रजिस्टर प्रणाली द्वारा स्वतः भेजा गया है।
         </div>
       </div>
     `
 
     const textContent = `
-वार्ड मित्र 08 · संचालक सूचना
+जनसेवा 09 · संचालक सूचना
 नई नागरिक शिकायत प्राप्त हुई: कोड ${code}
 
 नागरिक का नाम: ${name}
@@ -193,7 +201,7 @@ ${(() => {
     const info = await transporter.sendMail({
       from: smtpFrom,
       to: toEmail,
-      subject: `[वार्ड मित्र 08] नई शिकायत दर्ज हुई — ${code} (${category})`,
+      subject: `[जनसेवा 09] नई शिकायत दर्ज हुई — ${code} (${category})`,
       text: textContent,
       html: htmlContent,
     })
@@ -233,7 +241,7 @@ export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailPr
   }
 
   const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
+  const smtpFrom = process.env.SMTP_FROM || `"जनसेवा 09" <${smtpUser}>`
   const appUrl = getAppUrl()
   const codeSlug = toCodeSlug(code)
   const publicUrl = `${appUrl}/s/${codeSlug}`
@@ -329,7 +337,7 @@ export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailPr
     `
 
     const textContent = `
-वार्ड मित्र 08 · समाधान सूचना
+जनसेवा 09 · समाधान सूचना
 नमस्ते ${name} जी,
 
 आपकी शिकायत (कोड: ${code}) का समाधान सफलता से कर दिया गया है!
@@ -349,7 +357,7 @@ ${after_photo_url ? `समाधान फ़ोटो प्रमाण: ${af
     const info = await transporter.sendMail({
       from: smtpFrom,
       to: toEmail,
-      subject: `[वार्ड मित्र 08] आपकी शिकायत का समाधान हो गया है — कोड: ${code}`,
+      subject: `[जनसेवा 09] आपकी शिकायत का समाधान हो गया है — कोड: ${code}`,
       text: textContent,
       html: htmlContent,
     })
@@ -388,7 +396,7 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
   }
 
   const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
+  const smtpFrom = process.env.SMTP_FROM || `"जनसेवा 09" <${smtpUser}>`
   const appUrl = getAppUrl()
   const codeSlug = code.replace('/', '-')
   const publicUrl = `${appUrl}/s/${codeSlug}`
@@ -491,7 +499,7 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
     `
 
     const textContent = `
-वार्ड मित्र 08 · जनसेवा पावती
+जनसेवा 09 · जनसेवा पावती
 नमस्ते ${name} जी,
 
 आपकी शिकायत सफलतापूर्वक दर्ज कर ली गई है!
@@ -555,7 +563,7 @@ export async function sendComplaintStatusUpdateEmail(props: ComplaintStatusUpdat
   }
 
   const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
+  const smtpFrom = process.env.SMTP_FROM || `"जनसेवा 09" <${smtpUser}>`
   const appUrl = getAppUrl()
   const codeSlug = toCodeSlug(code)
   const publicUrl = `${appUrl}/s/${codeSlug}`
