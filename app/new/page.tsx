@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LocationPicker from './LocationPicker'
-import { useLanguage } from '@/context/LanguageContext'
 
 const CATEGORIES = [
   'गली की सफ़ाई', 'कचरा गाड़ी नहीं आई', 'नाली / सीवर जाम',
@@ -57,7 +56,6 @@ function NewComplaintForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const catQuery = searchParams.get('cat')
-  const { t } = useLanguage()
 
   const [category, setCategory] = useState(() => matchCategory(catQuery))
   const [photos, setPhotos] = useState<PhotoItem[]>([])
@@ -121,7 +119,7 @@ function NewComplaintForm() {
     e.preventDefault()
 
     if (photos.length === 0) {
-      setError(t('फ़ोटो लगाना अनिवार्य है! कम से कम 1 फ़ोटो खींचकर जोड़ें।'))
+      setError('फ़ोटो लगाना अनिवार्य है! कम से कम 1 फ़ोटो खींचकर जोड़ें।')
       document.getElementById('photo-section')?.scrollIntoView({ behavior: 'smooth' })
       return
     }
@@ -142,7 +140,7 @@ function NewComplaintForm() {
       const res = await fetch('/api/shikayat', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error || t('कुछ गड़बड़ हुई। फिर कोशिश कीजिए।'))
+        setError(json.error || 'कुछ गड़बड़ हुई। फिर कोशिश कीजिए।')
         setLoading(false)
         return
       }
@@ -150,26 +148,26 @@ function NewComplaintForm() {
       setLoading(false)
       setTimeout(() => router.push(`/s/${json.code.replace('/', '-')}`), 1500)
     } catch {
-      setError(t('सर्वर से संपर्क नहीं हो पाया। कृपया इंटरनेट चेक करें।'))
+      setError('सर्वर से संपर्क नहीं हो पाया। कृपया इंटरनेट चेक करें।')
       setLoading(false)
     }
   }
 
   return (
-    <section className="sec" data-native-i18n="true">
+    <section className="sec">
       <div className="wrap formwrap">
-        <h2 className="sh">{t('शिकायत दर्ज कीजिए')}</h2>
-        <p className="sp">{t('वार्ड के काम की बात यहाँ लिखिए। फ़ोटो लगाना अनिवार्य है।')}</p>
+        <h2 className="sh">{'शिकायत दर्ज कीजिए'}</h2>
+        <p className="sp">{'वार्ड के काम की बात यहाँ लिखिए। फ़ोटो लगाना अनिवार्य है।'}</p>
 
         <div className="notours">
-          <b>{t('ये काम यहाँ नहीं होते')}</b>
-          <p>{t('इन पर पार्षद का सीधा अधिकार नहीं है। सीधे इनसे बात कीजिए।')}</p>
+          <b>{'ये काम यहाँ नहीं होते'}</b>
+          <p>{'इन पर पार्षद का सीधा अधिकार नहीं है। सीधे इनसे बात कीजिए।'}</p>
           <ul>
-            <li>{t('बिजली का फ़ॉल्ट, मीटर')} <span>{t('बिजली विभाग')}</span></li>
-            <li>{t('राशन, पेंशन, प्रमाण पत्र')} <span>{t('ई-मित्र / SDM कार्यालय')}</span></li>
-            <li>{t('गृह कर, पट्टा, नामांतरण')} <span>{t('नगर निगम कार्यालय')}</span></li>
+            <li>{'बिजली का फ़ॉल्ट, मीटर'} <span>{'बिजली विभाग'}</span></li>
+            <li>{'राशन, पेंशन, प्रमाण पत्र'} <span>{'ई-मित्र / SDM कार्यालय'}</span></li>
+            <li>{'गृह कर, पट्टा, नामांतरण'} <span>{'नगर निगम कार्यालय'}</span></li>
           </ul>
-          <a href="/numbers">{t('इनके नंबर देखिए')}</a>
+          <a href="/numbers">{'इनके नंबर देखिए'}</a>
         </div>
 
         {error && (
@@ -179,8 +177,8 @@ function NewComplaintForm() {
         )}
         {success && (
           <div className="succ">
-            <b>{t('शिकायत दर्ज हो गई —')} {success}</b>
-            <p>{t('शिकायत नंबर आपकी ईमेल पर भेज दिया गया है। स्थिति देखने के लिए इसी कोड का उपयोग करें।')}</p>
+            <b>{'शिकायत दर्ज हो गई —'} {success}</b>
+            <p>{'शिकायत नंबर आपकी ईमेल पर भेज दिया गया है। स्थिति देखने के लिए इसी कोड का उपयोग करें।'}</p>
           </div>
         )}
 
@@ -189,9 +187,9 @@ function NewComplaintForm() {
 
           <div className="f" id="photo-section">
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{t('फ़ोटो')} <strong style={{ color: '#DC2626' }}>{t('* (अनिवार्य — 1 से 3 फ़ोटो)')}</strong></span>
+              <span>{'फ़ोटो'} <strong style={{ color: '#DC2626' }}>{'* (अनिवार्य — 1 से 3 फ़ोटो)'}</strong></span>
               <span style={{ fontSize: 12, color: photos.length > 0 ? '#166534' : '#DC2626', fontWeight: 700 }}>
-                {photos.length > 0 ? `${photos.length} / ${MAX_PHOTOS} फ़ोटो जोड़ी गईं` : t('कम से कम 1 फ़ोटो ज़रूरी')}
+                {photos.length > 0 ? `${photos.length} / ${MAX_PHOTOS} फ़ोटो जोड़ी गईं` : 'कम से कम 1 फ़ोटो ज़रूरी'}
               </span>
             </label>
 
@@ -224,8 +222,8 @@ function NewComplaintForm() {
                     <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4Z" />
                     <circle cx="12" cy="13" r="3.5" />
                   </svg>
-                  <b>{t('कैमरा खोलिए')}</b>
-                  <span>{photos.length > 0 ? t('दूसरी फ़ोटो खींचिए') : t('मौके से लाइव फ़ोटो खींचिए')}</span>
+                  <b>{'कैमरा खोलिए'}</b>
+                  <span>{photos.length > 0 ? 'दूसरी फ़ोटो खींचिए' : 'मौके से लाइव फ़ोटो खींचिए'}</span>
                 </button>
 
                 <button
@@ -235,7 +233,7 @@ function NewComplaintForm() {
                   onClick={() => galleryRef.current?.click()}
                 >
                   <span>🖼️</span>
-                  <span>{t('गैलरी से चुनिए')}</span>
+                  <span>{'गैलरी से चुनिए'}</span>
                 </button>
               </div>
             )}
@@ -303,65 +301,65 @@ function NewComplaintForm() {
               </div>
             )}
 
-            <div className="hint">{t('समस्या की स्थिति साफ़ दिखाने के लिए 1 से 3 अलग-अलग कोणों से फ़ोटो जोड़ें।')}</div>
-            <div className="warn">{t('किसी का चेहरा, गाड़ी का नंबर या घर का नंबर साफ़ दिख रहा हो तो वो फ़ोटो मत डालिए।')}</div>
+            <div className="hint">{'समस्या की स्थिति साफ़ दिखाने के लिए 1 से 3 अलग-अलग कोणों से फ़ोटो जोड़ें।'}</div>
+            <div className="warn">{'किसी का चेहरा, गाड़ी का नंबर या घर का नंबर साफ़ दिख रहा हो तो वो फ़ोटो मत डालिए।'}</div>
           </div>
 
           <div className="f">
-            <label htmlFor="a1">{t('आपका नाम')}</label>
-            <input id="a1" name="name" maxLength={60} placeholder={t('जैसे — सुनीता शर्मा')} required />
+            <label htmlFor="a1">{'आपका नाम'}</label>
+            <input id="a1" name="name" maxLength={60} placeholder={'जैसे — सुनीता शर्मा'} required />
           </div>
 
           <div className="f">
-            <label htmlFor="a2">{t('फ़ोन नंबर')}</label>
-            <input id="a2" name="phone" type="tel" inputMode="numeric" maxLength={15} placeholder={t('10 अंक')} required />
-            <div className="hint">{t('सिर्फ़ आपसे बात करने के लिए। शिकायतों में कभी नहीं दिखेगा।')}</div>
+            <label htmlFor="a2">{'फ़ोन नंबर'}</label>
+            <input id="a2" name="phone" type="tel" inputMode="numeric" maxLength={15} placeholder={'10 अंक'} required />
+            <div className="hint">{'सिर्फ़ आपसे बात करने के लिए। शिकायतों में कभी नहीं दिखेगा।'}</div>
           </div>
 
           <div className="f">
             <label htmlFor="a-email" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{t('ईमेल पता')} <strong style={{ color: '#DC2626' }}>{t('* (अनिवार्य)')}</strong></span>
-              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{t('शिकायत सं. व समाधान ईमेल पर आएगा')}</span>
+              <span>{'ईमेल पता'} <strong style={{ color: '#DC2626' }}>{'* (अनिवार्य)'}</strong></span>
+              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{'शिकायत सं. व समाधान ईमेल पर आएगा'}</span>
             </label>
             <input
               id="a-email"
               name="email"
               type="email"
               maxLength={100}
-              placeholder={t('जैसे — rahul@gmail.com')}
+              placeholder={'जैसे — rahul@gmail.com'}
               required
             />
-            <div className="hint">{t('शिकायत दर्ज होते ही शिकायत नंबर और समाधान होने पर सूचना आपको इस ईमेल पर भेजी जाएगी।')}</div>
+            <div className="hint">{'शिकायत दर्ज होते ही शिकायत नंबर और समाधान होने पर सूचना आपको इस ईमेल पर भेजी जाएगी।'}</div>
           </div>
 
           <div className="f">
-            <label htmlFor="a3">{t('पता / मोहल्ला')}</label>
+            <label htmlFor="a3">{'पता / मोहल्ला'}</label>
             <input
               id="a3"
               name="mohalla"
               maxLength={180}
-              placeholder={t('गली, मोहल्ला और पास की कोई पहचान')}
+              placeholder={'गली, मोहल्ला और पास की कोई पहचान'}
               value={mohallaValue}
               onChange={e => setMohallaValue(e.target.value)}
               required
             />
-            <div className="hint">{t('जैसे — गंगा गली, स्कूल के पीछे वाला मोड़।')}</div>
+            <div className="hint">{'जैसे — गंगा गली, स्कूल के पीछे वाला मोड़।'}</div>
           </div>
 
           <div className="f">
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{t('📍 स्थान / लोकेशन (नक्शा व GPS)')}</span>
-              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{t('संचालक को सटीक जगह दिखेगी')}</span>
+              <span>{'📍 स्थान / लोकेशन (नक्शा व GPS)'}</span>
+              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>{'संचालक को सटीक जगह दिखेगी'}</span>
             </label>
             <LocationPicker onLocationChange={handleLocationUpdate} />
           </div>
 
           <div className="f">
             <label htmlFor="a4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{t('किस बात की')} <strong style={{ color: 'var(--amber-d)' }}>*</strong></span>
+              <span>{'किस बात की'} <strong style={{ color: 'var(--amber-d)' }}>*</strong></span>
               {catQuery && (
                 <span style={{ fontSize: 12, color: 'var(--ink2)', background: 'var(--amber-s)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                  {t('श्रेणी चुनी गई')}
+                  {'श्रेणी चुनी गई'}
                 </span>
               )}
             </label>
@@ -371,20 +369,20 @@ function NewComplaintForm() {
               value={category}
               onChange={e => setCategory(e.target.value)}
             >
-              {CATEGORIES.map(c => <option key={c} value={c}>{t(c)}</option>)}
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
           <div className="f">
-            <label htmlFor="a5">{t('पूरी बात')}</label>
-            <textarea id="a5" name="detail" maxLength={800} placeholder={t('कहाँ, कब से, और क्या दिक्कत हो रही है')} required />
+            <label htmlFor="a5">{'पूरी बात'}</label>
+            <textarea id="a5" name="detail" maxLength={800} placeholder={'कहाँ, कब से, और क्या दिक्कत हो रही है'} required />
           </div>
 
           <button className="btn" type="submit" disabled={loading}>
-            {loading ? t('दर्ज हो रही है…') : t('शिकायत दर्ज कीजिए')}
+            {loading ? 'दर्ज हो रही है…' : 'शिकायत दर्ज कीजिए'}
           </button>
           <div className="hint" style={{ marginTop: '14px' }}>
-            {t('जनसेवा 09 सरकारी पोर्टल नहीं है। यहाँ दर्ज करने से नगर निगम में आधिकारिक शिकायत दर्ज नहीं होती।')}
+            {'जनसेवा 09 सरकारी पोर्टल नहीं है। यहाँ दर्ज करने से नगर निगम में आधिकारिक शिकायत दर्ज नहीं होती।'}
           </div>
         </form>
       </div>

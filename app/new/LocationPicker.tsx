@@ -3,14 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
-import { useLanguage } from '@/context/LanguageContext'
 
 interface LocationPickerProps {
   onLocationChange: (loc: { lat: number; lng: number; address?: string }) => void
 }
 
 export default function LocationPicker({ onLocationChange }: LocationPickerProps) {
-  const { t } = useLanguage()
   // Default coordinates: Jodhpur center (Ward 09 area approx)
   const defaultLat = 26.2389
   const defaultLng = 73.0243
@@ -149,7 +147,7 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
 
         if (permStatus.location !== 'granted') {
           setLocating(false)
-          setLocError(t('लोकेशन की अनुमति नहीं दी गई। कृपया फ़ोन सेटिंग्स ➔ ऐप्स ➔ जनसेवा 09 में लोकेशन अनुमति दें।'))
+          setLocError('लोकेशन की अनुमति नहीं दी गई। कृपया फ़ोन सेटिंग्स ➔ ऐप्स ➔ जनसेवा 09 में लोकेशन अनुमति दें।')
           return
         }
 
@@ -176,12 +174,12 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
         const errMsg = (nativeErr?.message || '').toLowerCase()
         if (errMsg.includes('denied') || errMsg.includes('permission')) {
           setLocating(false)
-          setLocError(t('लोकेशन की अनुमति नहीं दी गई। कृपया फ़ोन सेटिंग्स में लोकेशन अनुमति दें।'))
+          setLocError('लोकेशन की अनुमति नहीं दी गई। कृपया फ़ोन सेटिंग्स में लोकेशन अनुमति दें।')
           return
         }
         if (errMsg.includes('disabled') || errMsg.includes('location services')) {
           setLocating(false)
-          setLocError(t('फ़ोन का GPS / लोकेशन बंद है। कृपया नोटिफिकेशन बार से लोकेशन चालू करें।'))
+          setLocError('फ़ोन का GPS / लोकेशन बंद है। कृपया नोटिफिकेशन बार से लोकेशन चालू करें।')
           return
         }
       }
@@ -190,7 +188,7 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
     // Web Browser Flow (Standard browser Geolocation API)
     if (!navigator.geolocation) {
       setLocating(false)
-      setLocError(t('आपके ब्राउज़र में GPS लोकेशन समर्थित नहीं है।'))
+      setLocError('आपके ब्राउज़र में GPS लोकेशन समर्थित नहीं है।')
       return
     }
 
@@ -210,13 +208,13 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
       },
       err => {
         setLocating(false)
-        let msg = t('लोकेशन प्राप्त नहीं हो सकी।')
+        let msg = 'लोकेशन प्राप्त नहीं हो सकी।'
         if (err.code === 1) {
-          msg = t('लोकेशन की अनुमति नहीं दी गई। कृपया ब्राउज़र सेटिंग्स में लोकेशन चालू करें।')
+          msg = 'लोकेशन की अनुमति नहीं दी गई। कृपया ब्राउज़र सेटिंग्स में लोकेशन चालू करें।'
         } else if (err.code === 2) {
-          msg = t('GPS सिग्नल नहीं मिला। कृपया सीधे मैप पर टैप करके स्थान चुनें।')
+          msg = 'GPS सिग्नल नहीं मिला। कृपया सीधे मैप पर टैप करके स्थान चुनें।'
         } else if (err.code === 3) {
-          msg = t('लोकेशन का समय समाप्त हो गया। फिर से कोशिश करें।')
+          msg = 'लोकेशन का समय समाप्त हो गया। फिर से कोशिश करें।'
         }
         setLocError(msg)
       },
@@ -231,7 +229,7 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
   const mapsUrl = coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null
 
   return (
-    <div className="location-picker-wrap" data-native-i18n="true" style={{ marginTop: 6, marginBottom: 16 }}>
+    <div className="location-picker-wrap" style={{ marginTop: 6, marginBottom: 16 }}>
       {/* Top action row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <button
@@ -259,18 +257,18 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
             <circle cx="12" cy="12" r="3" />
             <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
           </svg>
-          {locating ? t('GPS लोकेशन खोजी जा रही है…') : t('📍 मेरी वर्तमान लोकेशन प्राप्त करें (GPS)')}
+          {locating ? 'GPS लोकेशन खोजी जा रही है…' : '📍 मेरी वर्तमान लोकेशन प्राप्त करें (GPS)'}
         </button>
 
         {coords && (
           <span style={{ fontSize: 13, color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span>{t('✓ लोकेशन दर्ज:')}</span>
+            <span>{'✓ लोकेशन दर्ज:'}</span>
             <code style={{ background: '#ECFDF5', padding: '2px 6px', borderRadius: 4, color: '#047857' }}>
               {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
             </code>
             {mapsUrl && (
               <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', color: '#2563EB', fontSize: 12 }}>
-                {t('नक्शे पर देखें ↗')}
+                {'नक्शे पर देखें ↗'}
               </a>
             )}
           </span>
@@ -299,14 +297,14 @@ export default function LocationPicker({ onLocationChange }: LocationPickerProps
       >
         {!mapLoaded && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--ink2)', fontSize: 13 }}>
-            {t('नक्शा लोड हो रहा है…')}
+            {'नक्शा लोड हो रहा है…'}
           </div>
         )}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--ink2)' }}>
-        <span>{t('👉 मैप पर टैप करके या लाल पिन खिसकाकर सटीक स्थान चुन सकते हैं।')}</span>
-        {address && <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{t('पहचान:')} {address}</span>}
+        <span>{'👉 मैप पर टैप करके या लाल पिन खिसकाकर सटीक स्थान चुन सकते हैं।'}</span>
+        {address && <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{'पहचान:'} {address}</span>}
       </div>
 
       {/* Hidden inputs for form submission */}

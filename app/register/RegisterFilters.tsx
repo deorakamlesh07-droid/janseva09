@@ -2,23 +2,21 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLanguage } from '@/context/LanguageContext'
 
 const STATUS_FILTERS = [
-  { key: '', label: 'सब', enLabel: 'All' },
-  { key: 'काम पूरा', label: 'काम पूरा', enLabel: 'Completed' },
-  { key: 'काम चालू', label: 'काम चालू', enLabel: 'In Progress' },
-  { key: 'स्वीकृत', label: 'स्वीकृत', enLabel: 'Approved' },
-  { key: 'दर्ज', label: 'नई', enLabel: 'New' },
+  { key: '', label: 'सब' },
+  { key: 'काम पूरा', label: 'काम पूरा' },
+  { key: 'काम चालू', label: 'काम चालू' },
+  { key: 'स्वीकृत', label: 'स्वीकृत' },
+  { key: 'दर्ज', label: 'नई' },
 ]
 
-// Matches exactly the CATEGORIES list from app/new/page.tsx
 const CATEGORIES = [
   'गली की सफ़ाई',
-  'कचरा गाड़ी नहीं आई',
+  'कचरा गाड़ी नहीं आई',
   'नाली / सीवर जाम',
   'स्ट्रीट लाइट',
-  'सड़क / गड़्ग़ा',
+  'सड़क / गड़्ग़ा',
   'पानी भराव',
   'पानी नहीं आ रहा',
   'आवारा पशु',
@@ -28,11 +26,9 @@ const CATEGORIES = [
 
 const CAT_ICONS: Record<string, string> = {
   'गली की सफ़ाई': '🧹',
-  'कचरा गाड़ी नहीं आई': '🚛',
   'कचरा गाड़ी नहीं आई': '🚛',
   'नाली / सीवर जाम': '🚿',
   'स्ट्रीट लाइट': '💡',
-  'सड़क / गड़्ग़ा': '🕳️',
   'सड़क / गड़्ग़ा': '🕳️',
   'पानी भराव': '🌊',
   'पानी नहीं आ रहा': '🚰',
@@ -46,15 +42,7 @@ const HINDI_MONTHS = [
   'जुलाई', 'अगस्त', 'सितंबर', 'अक्तूबर', 'नवंबर', 'दिसंबर'
 ]
 
-const ENG_MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-]
-
 const HINDI_DAYS = ['रवि', 'सोम', 'मंगल', 'बुध', 'गुरु', 'शुक्र', 'शनि']
-const ENG_DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-
-
 
 function formatDateParam(d: Date): string {
   const y = d.getFullYear()
@@ -75,8 +63,6 @@ export default function RegisterFilters({
   currentQuery: string
 }) {
   const router = useRouter()
-  const { lang, t } = useLanguage()
-  const isHi = lang === 'hi'
 
   const [showCal, setShowCal] = useState(false)
   const [calMonth, setCalMonth] = useState(() => {
@@ -151,7 +137,7 @@ export default function RegisterFilters({
   }
 
   const selectedDateStr = currentDate
-    ? new Date(currentDate + 'T00:00:00').toLocaleDateString(isHi ? 'hi-IN' : 'en-IN', {
+    ? new Date(currentDate + 'T00:00:00').toLocaleDateString('hi-IN', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
@@ -169,7 +155,7 @@ export default function RegisterFilters({
             aria-pressed={currentFilter === fil.key ? 'true' : 'false'}
             href={buildUrl({ f: fil.key })}
           >
-            {isHi ? fil.label : fil.enLabel}
+            {fil.label}
           </a>
         ))}
       </div>
@@ -182,17 +168,17 @@ export default function RegisterFilters({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
               <path d="M4 4h16v2.172a2 2 0 0 1-.586 1.414l-5.828 5.828A2 2 0 0 0 13 14.828V19l-2 2v-6.172a2 2 0 0 0-.586-1.414L4.586 7.586A2 2 0 0 1 4 6.172Z" />
             </svg>
-            {t('श्रेणी')}
+            श्रेणी
           </label>
           <select
             className="filter-select"
             value={currentCategory}
             onChange={e => navigate({ c: e.target.value })}
           >
-            <option value="">{t('सभी श्रेणियाँ')}</option>
+            <option value="">सभी श्रेणियाँ</option>
             {CATEGORIES.map(cat => (
               <option key={cat} value={cat}>
-                {CAT_ICONS[cat] || '📋'} {t(cat)}
+                {CAT_ICONS[cat] || '📋'} {cat}
               </option>
             ))}
           </select>
@@ -207,7 +193,7 @@ export default function RegisterFilters({
               <line x1="8" y1="2" x2="8" y2="6" />
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
-            {t('तारीख़')}
+            तारीख़
           </label>
           <button
             type="button"
@@ -221,11 +207,11 @@ export default function RegisterFilters({
                 <span
                   className="date-clear"
                   onClick={e => { e.stopPropagation(); clearDate() }}
-                  title={isHi ? 'हटाइए' : 'Clear'}
+                  title="हटाइए"
                 >✕</span>
               </span>
             ) : (
-              <span>{t('तारीख़ चुनिए')}</span>
+              <span>तारीख़ चुनिए</span>
             )}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -237,17 +223,17 @@ export default function RegisterFilters({
 
           {/* Interactive Calendar Dropdown */}
           {showCal && (
-            <div className="cal-popup" role="dialog" aria-label="Calendar">
+            <div className="cal-popup" role="dialog" aria-label="कैलेंडर">
               <div className="cal-head">
-                <button type="button" onClick={prevMonth} className="cal-arrow" title={isHi ? 'पिछला महीना' : 'Previous month'}>‹</button>
+                <button type="button" onClick={prevMonth} className="cal-arrow" title="पिछला महीना">‹</button>
                 <span className="cal-title">
-                  {isHi ? `${HINDI_MONTHS[calMon]} ${calYear}` : `${ENG_MONTHS[calMon]} ${calYear}`}
+                  {`${HINDI_MONTHS[calMon]} ${calYear}`}
                 </span>
-                <button type="button" onClick={nextMonth} className="cal-arrow" title={isHi ? 'अगला महीना' : 'Next month'}>›</button>
+                <button type="button" onClick={nextMonth} className="cal-arrow" title="अगला महीना">›</button>
               </div>
 
               <div className="cal-days">
-                {(isHi ? HINDI_DAYS : ENG_DAYS).map(d => (
+                {HINDI_DAYS.map(d => (
                   <span key={d} className="cal-dayname">{d}</span>
                 ))}
               </div>
@@ -281,11 +267,11 @@ export default function RegisterFilters({
               {/* Quick actions: Today & Clear */}
               <div className="cal-actions">
                 <button type="button" className="cal-btn-today" onClick={selectToday}>
-                  {isHi ? 'आज' : 'Today'}
+                  आज
                 </button>
                 {currentDate && (
                   <button type="button" className="cal-clear" onClick={clearDate}>
-                    {isHi ? 'तारीख़ हटाइए' : 'Clear Date'}
+                    तारीख़ हटाइए
                   </button>
                 )}
               </div>
@@ -297,21 +283,21 @@ export default function RegisterFilters({
       {/* Active Filters Summary Pills */}
       {(currentCategory || currentDate) && (
         <div className="active-filters">
-          <span className="af-label">{t('फ़िल्टर')}:</span>
+          <span className="af-label">फ़िल्टर:</span>
           {currentCategory && (
             <span className="af-tag">
-              {CAT_ICONS[currentCategory] || '📋'} {t(currentCategory)}
-              <button onClick={() => navigate({ c: '' })} className="af-x" title={isHi ? 'हटाइए' : 'Remove'}>✕</button>
+              {CAT_ICONS[currentCategory] || '📋'} {currentCategory}
+              <button onClick={() => navigate({ c: '' })} className="af-x" title="हटाइए">✕</button>
             </span>
           )}
           {currentDate && (
             <span className="af-tag">
               📅 {selectedDateStr}
-              <button onClick={() => navigate({ d: '' })} className="af-x" title={isHi ? 'हटाइए' : 'Remove'}>✕</button>
+              <button onClick={() => navigate({ d: '' })} className="af-x" title="हटाइए">✕</button>
             </span>
           )}
           <button className="af-clearall" onClick={() => navigate({ c: '', d: '' })}>
-            {isHi ? 'फ़िल्टर साफ़ करें' : 'Clear Filters'}
+            फ़िल्टर साफ़ करें
           </button>
         </div>
       )}

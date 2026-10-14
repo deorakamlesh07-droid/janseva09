@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { cookies } from 'next/headers'
 import './globals.css'
 import NavClient from './NavClient'
-import NativeTranslator from './NativeTranslator'
 import CapacitorBridge from './CapacitorBridge'
-import { LanguageProvider, Language } from '@/context/LanguageContext'
 
 export const metadata: Metadata = {
   title: 'जनसेवा — वार्ड 09, जोधपुर का अपना रजिस्टर',
@@ -18,12 +15,9 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const initialLang = (cookieStore.get('ward9_lang')?.value as Language) || 'hi'
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang={initialLang} suppressHydrationWarning>
+    <html lang="hi" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light" />
         <meta name="theme-color" content="#FFFFFF" />
@@ -36,20 +30,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body suppressHydrationWarning>
-        <LanguageProvider initialLang={initialLang}>
-          <CapacitorBridge />
-          <NativeTranslator />
-          <NavClient />
-          {children}
-          <footer className="ft">
-            <div className="wrap">
-              <span>
-                जनसेवा 09 · जोधपुर — यह सरकारी पोर्टल नहीं है।
-                यह वार्ड स्तर की नागरिक शिकायत एवं जनसुनवाई व्यवस्था है, जहाँ शिकायतें संबंधित प्रतिनिधि तक पहुँचाकर उनके समाधान की स्थिति पारदर्शी रूप से दिखाई जाती है।
-              </span>
-            </div>
-          </footer>
-        </LanguageProvider>
+        <CapacitorBridge />
+        <NavClient />
+        {children}
+        <footer className="ft">
+          <div className="wrap">
+            <span>
+              जनसेवा 09 · जोधपुर — यह सरकारी पोर्टल नहीं है।
+              यह वार्ड स्तर की नागरिक शिकायत एवं जनसुनवाई व्यवस्था है, जहाँ शिकायतें संबंधित प्रतिनिधि तक पहुँचाकर उनके समाधान की स्थिति पारदर्शी रूप से दिखाई जाती है।
+            </span>
+          </div>
+        </footer>
       </body>
     </html>
   )

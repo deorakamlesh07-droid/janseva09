@@ -77,80 +77,6 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .emg:hover{transform:translateY(-1px)}
 .emg svg{width:15px;height:15px}
 
-/* ── LANGUAGE SLIDEBAR (भाषा स्लाइडर) ── */
-.lang-slider-container{
-  display:inline-flex;
-  align-items:center;
-  user-select:none;
-}
-.lang-slider-track{
-  position:relative;
-  display:flex;
-  align-items:center;
-  background:rgba(0,0,0,0.22);
-  border:1.5px solid rgba(255,255,255,0.38);
-  border-radius:24px;
-  padding:3px;
-  height:36px;
-  box-shadow:inset 0 1px 3px rgba(0,0,0,0.25);
-  backdrop-filter:blur(4px);
-}
-.lang-slider-thumb{
-  position:absolute;
-  top:3px;
-  bottom:3px;
-  left:3px;
-  width:calc(50% - 3px);
-  background:#FFFFFF;
-  border-radius:20px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.25);
-  transition:transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events:none;
-  z-index:1;
-}
-.lang-slider-track.is-en .lang-slider-thumb{
-  transform:translateX(100%);
-}
-.lang-slider-track.is-hi .lang-slider-thumb{
-  transform:translateX(0);
-}
-.lang-btn{
-  position:relative;
-  z-index:2;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  padding:0 12px;
-  height:100%;
-  font-size:13.5px;
-  font-weight:600;
-  color:rgba(255,255,255,0.92);
-  border-radius:20px;
-  transition:color 0.2s ease;
-  white-space:nowrap;
-  cursor:pointer;
-  outline:none;
-}
-.lang-btn:hover{
-  color:#FFFFFF;
-}
-.lang-btn.active{
-  color:#C03906;
-  font-weight:800;
-}
-.lang-icon{
-  font-size:13px;
-  line-height:1;
-}
-.lang-text{
-  letter-spacing:0.01em;
-}
-
-/* ── MOBILE SLIDEBAR DRAWER (Hidden on laptop/desktop) ── */
-.mobile-slidebar-toggle{
-  display:none;
-}
 .mobile-slidebar-backdrop{
   display:none;
 }
@@ -213,21 +139,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
     flex:none;
     gap:6px;
   }
-  .lang-slider-track{
-    height:32px;
-    padding:2px;
-  }
+  
   .lang-slider-thumb{
     top:2px;
     bottom:2px;
     left:2px;
     width:calc(50% - 2px);
   }
-  .lang-btn{
-    padding:0 7px;
-    font-size:11.5px;
-    gap:3px;
-  }
+  
   .emg{
     padding:6px 10px;
     font-size:12px;
@@ -506,9 +425,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   .nav-actions{gap:4px}
   .apk-refresh-btn{padding:6px 8px;font-size:11px}
   .apk-refresh-btn .apk-refresh-label{display:none}
-  .lang-slider-track{height:28px}
-  .lang-btn{padding:0 6px;font-size:11px;gap:2px}
-  .lang-icon{display:none}
+  
+  
+  
   .emg{padding:6px 8px;font-size:11px}
   .emg span{display:none}
 }
