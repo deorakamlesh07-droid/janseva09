@@ -13,6 +13,7 @@ export function getServiceClient() {
 }
 
 export type Shikayat = {
+  photo_urls?: string[] | null
   id: number
   code: string
   name: string
@@ -37,6 +38,7 @@ export type DainikKarya = {
   work_date: string
   area: string | null
   category: string
+  photo_urls?: string[] | null
   photo_url: string | null
   created_at: string
 }

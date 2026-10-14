@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     if (table === 'shikayat') {
       const { data: existing } = await supabase
         .from('shikayat')
-        .select('code, photo_url, after_photo_url')
+        .select('code, photo_url, photo_urls, after_photo_url')
         .eq('id', id)
         .single()
 
@@ -42,7 +42,12 @@ export async function POST(req: NextRequest) {
           const idx = u.indexOf(marker)
           return idx !== -1 ? decodeURIComponent(u.substring(idx + marker.length)) : null
         }
-        const paths = [extractPath(existing.photo_url), extractPath(existing.after_photo_url)].filter(Boolean) as string[]
+        // Collect all photo paths (single + multiple array + after)
+        const allPhotoUrls: (string | null)[] = [
+          ...(existing.photo_urls && existing.photo_urls.length > 0 ? existing.photo_urls : [existing.photo_url]),
+          existing.after_photo_url,
+        ]
+        const paths = allPhotoUrls.map(extractPath).filter(Boolean) as string[]
         if (paths.length > 0) {
           try {
             await supabase.storage.from('photos').remove(paths)

@@ -2,9 +2,14 @@ import { getServiceClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { sendComplaintNotificationEmail, sendComplaintCitizenConfirmationEmail } from '@/lib/mailer'
+import { broadcastComplaintPushNotification } from '@/lib/push-notifications'
+
+// Increase Vercel serverless timeout to 60s (max on hobby plan) so nodemailer
+// has enough time to establish the SMTP connection and send both emails.
+export const maxDuration = 60
 
 /** Runs a promise with a timeout — never throws, just logs on failure */
-async function sendSafe(label: string, promise: Promise<any>, timeoutMs = 8000) {
+async function sendSafe(label: string, promise: Promise<any>, timeoutMs = 15000) {
   try {
     await Promise.race([
       promise,
@@ -97,7 +102,15 @@ export async function POST(req: NextRequest) {
     const mohalla = (fd.get('mohalla') as string || '').trim()
     const category = (fd.get('category') as string || 'गली की सफ़ाई').trim()
     const detail = (fd.get('detail') as string || '').trim()
-    const photo = fd.get('photo') as File | null
+    const allPhotos: File[] = []
+    const multiPhotos = fd.getAll('photos[]') as File[]
+    for (const f of multiPhotos) {
+      if (f && f.size > 0) allPhotos.push(f)
+    }
+    const singlePhoto = fd.get('photo') as File | null
+    if (singlePhoto && singlePhoto.size > 0 && allPhotos.length === 0) {
+      allPhotos.push(singlePhoto)
+    }
 
     if (!name || !phone || !email || !mohalla || !detail)
       return NextResponse.json({ error: 'सभी ज़रूरी जानकारी भरिए (ईमेल सहित)।' }, { status: 400 })
@@ -106,33 +119,42 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       return NextResponse.json({ error: 'कृपया सही ईमेल पता दर्ज करें (उदा. name@example.com)।' }, { status: 400 })
 
-    if (!photo || photo.size === 0) {
-      return NextResponse.json({ error: 'फ़ोटो लगाना अनिवार्य है। बिना फ़ोटो के शिकायत दर्ज नहीं हो सकती।' }, { status: 400 })
+    if (allPhotos.length === 0) {
+      return NextResponse.json({ error: 'फ़ोटो लगाना अनिवार्य है। कृपया लाइव कैमरे से कम से कम 1 फ़ोटो खींचकर जोड़ें।' }, { status: 400 })
     }
 
-    if (photo.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'फ़ोटो का साइज़ 10MB से कम होना चाहिए।' }, { status: 400 })
+    if (allPhotos.length > 3) {
+      return NextResponse.json({ error: 'अधिकतम 3 फ़ोटो अपलोड की जा सकती हैं।' }, { status: 400 })
     }
 
     const allowedMime = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/heic']
-    if (photo.type && !allowedMime.includes(photo.type.toLowerCase())) {
-      return NextResponse.json({ error: 'केवल JPG, PNG या WebP फ़ोटो स्वीकार्य हैं।' }, { status: 400 })
+    for (const photo of allPhotos) {
+      if (photo.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ error: 'प्रत्येक फ़ोटो का साइज़ 10MB से कम होना चाहिए।' }, { status: 400 })
+      }
+      if (photo.type && !allowedMime.includes(photo.type.toLowerCase())) {
+        return NextResponse.json({ error: 'केवल JPG, PNG या WebP फ़ोटो स्वीकार्य हैं।' }, { status: 400 })
+      }
     }
 
     const lat = (fd.get('latitude') as string || '').trim()
     const lng = (fd.get('longitude') as string || '').trim()
     const locAddress = (fd.get('location_address') as string || '').trim()
 
-    let fullDetail = detail
-    if (lat && lng) {
-      const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`
-      fullDetail = `${detail}\n\n📍 सटीक लोकेशन: ${lat}, ${lng} (${mapsUrl})${locAddress ? ` [पहचान: ${locAddress}]` : ''}`
+    if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
+      return NextResponse.json(
+        { error: 'शिकायत दर्ज करने के लिए वर्तमान लोकेशन (GPS) अनिवार्य है। कृपया लोकेशन अनुमति दें।' },
+        { status: 400 }
+      )
     }
 
-    const supabase = getServiceClient()
-    let photo_url: string | null = null
+    const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`
+    const fullDetail = `${detail}\n\n📍 सटीक लोकेशन: ${lat}, ${lng} (${mapsUrl})${locAddress ? ` [पहचान: ${locAddress}]` : ''}`
 
-    if (photo && photo.size > 0) {
+    const supabase = getServiceClient()
+    const photo_urls: string[] = []
+
+    for (const photo of allPhotos) {
       const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
       const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'heic'].includes(ext) ? ext : 'jpg'
       const filename = `shikayat/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`
@@ -142,25 +164,48 @@ export async function POST(req: NextRequest) {
         .upload(filename, buf, { contentType: photo.type || 'image/jpeg', upsert: false })
       if (!upErr) {
         const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filename)
-        photo_url = urlData.publicUrl
+        if (urlData?.publicUrl) {
+          photo_urls.push(urlData.publicUrl)
+        }
+      } else {
+        console.error('[Shikayat] Photo upload error:', upErr)
       }
     }
 
+    const photo_url: string | null = photo_urls[0] || null
     const code = await getNextCode()
 
-    // Resilient insert: Try with email column first, fallback to appending in detail if schema not updated yet
+    // Resilient insert: Try with photo_urls and email column first
     let dbError = null
-    const { error: errWithEmail } = await supabase.from('shikayat').insert({
-      code, name, phone, email, mohalla, category, detail: fullDetail, photo_url, status: 'दर्ज',
+    const { error: errFull } = await supabase.from('shikayat').insert({
+      code,
+      name,
+      phone,
+      email,
+      mohalla,
+      category,
+      detail: fullDetail,
+      photo_url,
+      photo_urls: photo_urls.length > 0 ? photo_urls : null,
+      status: 'दर्ज',
     })
 
-    if (errWithEmail) {
-      console.warn('[Shikayat] Insert with email column notice:', errWithEmail.message)
-      const detailWithEmail = `${fullDetail}\n\n✉️ शिकायतकर्ता ईमेल: ${email}`
-      const { error: errFallback } = await supabase.from('shikayat').insert({
-        code, name, phone, mohalla, category, detail: detailWithEmail, photo_url, status: 'दर्ज',
+    if (errFull) {
+      console.warn('[Shikayat] Insert with photo_urls notice:', errFull.message)
+      // Fallback 1: Insert without photo_urls (if column not yet added to Supabase)
+      const { error: errWithEmail } = await supabase.from('shikayat').insert({
+        code, name, phone, email, mohalla, category, detail: fullDetail, photo_url, status: 'दर्ज',
       })
-      dbError = errFallback
+
+      if (errWithEmail) {
+        console.warn('[Shikayat] Insert with email column notice:', errWithEmail.message)
+        // Fallback 2: Insert without email column
+        const detailWithEmail = `${fullDetail}\n\n✉️ शिकायतकर्ता ईमेल: ${email}`
+        const { error: errFallback } = await supabase.from('shikayat').insert({
+          code, name, phone, mohalla, category, detail: detailWithEmail, photo_url, status: 'दर्ज',
+        })
+        dbError = errFallback
+      }
     }
 
     if (dbError) {
@@ -173,25 +218,10 @@ export async function POST(req: NextRequest) {
     revalidatePath('/', 'page')
     revalidatePath('/register', 'page')
 
-    // Await both emails before returning the response.
-    // CRITICAL: In Vercel serverless, floating .catch() promises are killed the
-    // instant NextResponse is returned — emails would silently never send.
-    await Promise.all([
-      // 1. Admin notification → Sanchalak
-      sendSafe('Sanchalak notification', sendComplaintNotificationEmail({
-        code,
-        name,
-        phone,
-        email,
-        mohalla,
-        category,
-        detail: fullDetail,
-        photo_url,
-        latitude: lat || undefined,
-        longitude: lng || undefined,
-      })),
-      // 2. Citizen confirmation with complaint number
-      ...(email ? [sendSafe('Citizen confirmation', sendComplaintCitizenConfirmationEmail({
+    // Await emails before returning response in Vercel serverless
+    // Priority: Citizen confirmation with complaint number sent first so the citizen receives it immediately
+    if (email) {
+      await sendSafe('Citizen confirmation', sendComplaintCitizenConfirmationEmail({
         code,
         name,
         toEmail: email,
@@ -199,8 +229,32 @@ export async function POST(req: NextRequest) {
         mohalla,
         detail,
         photo_url,
-      }))] : []),
-    ])
+        photo_urls,
+      }), 25000)
+    }
+
+    // Admin notification to Sanchalak
+    await sendSafe('Sanchalak notification', sendComplaintNotificationEmail({
+      code,
+      name,
+      phone,
+      email,
+      mohalla,
+      category,
+      detail: fullDetail,
+      photo_url,
+      photo_urls,
+      latitude: lat || undefined,
+      longitude: lng || undefined,
+    }), 25000)
+
+    // Push notification to all Android APK users (delivered immediately or when back online)
+    await sendSafe('Push notification broadcast', broadcastComplaintPushNotification({
+      code,
+      category,
+      mohalla,
+      detail: fullDetail,
+    }), 15000)
 
     return NextResponse.json({ ok: true, code })
   } catch (e) {

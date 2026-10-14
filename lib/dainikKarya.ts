@@ -75,6 +75,7 @@ export async function addDainikKarya(item: {
   work_date: string
   area?: string | null
   category: string
+  photo_urls?: string[] | null
   photo_url?: string | null
 }): Promise<{ ok: boolean; data?: DainikKarya; error?: string }> {
   try {
@@ -87,6 +88,7 @@ export async function addDainikKarya(item: {
         work_date: item.work_date,
         area: item.area || null,
         category: item.category || 'सफ़ाई कार्य',
+        photo_urls: item.photo_urls && item.photo_urls.length > 0 ? item.photo_urls : null,
         photo_url: item.photo_url || null,
       })
       .select()
@@ -102,6 +104,7 @@ export async function addDainikKarya(item: {
         work_date: item.work_date,
         area: item.area || null,
         category: item.category || 'सफ़ाई कार्य',
+        photo_urls: item.photo_urls && item.photo_urls.length > 0 ? item.photo_urls : null,
         photo_url: item.photo_url || null,
         created_at: new Date().toISOString(),
       }

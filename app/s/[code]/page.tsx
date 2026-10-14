@@ -43,7 +43,7 @@ export default async function ShikayatDetail({ params }: { params: Promise<{ cod
   let c: Shikayat | null = null
   try {
     const supabase = getServiceClient()
-    const publicCols = 'id, code, mohalla, category, detail, photo_url, after_photo_url, status, deadline, admin_note, created_at, updated_at'
+    const publicCols = 'id, code, mohalla, category, detail, photo_url, photo_urls, after_photo_url, status, deadline, admin_note, created_at, updated_at'
     const { data } = await supabase.from('shikayat').select(publicCols).eq('code', realCode).single()
     c = data as Shikayat
   } catch { /* fall through */ }
@@ -51,7 +51,8 @@ export default async function ShikayatDetail({ params }: { params: Promise<{ cod
   if (!c) notFound()
 
   const curIdx = statusIdx(c.status)
-  const shareText = encodeURIComponent(`${c.code} — ${c.detail}\nhttps://janseva09.in/s/${code}`)
+  const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://janseva09.vercel.app'
+  const shareText = encodeURIComponent(`${c.code} — ${c.detail}\n${appBaseUrl}/s/${code}`)
 
   function pillClass(s: string) {
     if (s === 'काम पूरा' || s === 'पूरा') return 'done'
@@ -66,11 +67,27 @@ export default async function ShikayatDetail({ params }: { params: Promise<{ cod
       <div className="wrap detail">
         <a className="backlink" href="/register">← शिकायतें</a>
 
-        {c.photo_url && (
-          <div className="single">
-            <img src={c.photo_url} alt="" />
-          </div>
-        )}
+        {/* Complaint photos: show up to 3 in a grid */}
+        {(() => {
+          const pics: string[] = c!.photo_urls && c!.photo_urls.length > 0 ? c!.photo_urls : c!.photo_url ? [c!.photo_url] : []
+          if (pics.length === 0) return null
+          if (pics.length === 1) {
+            return (
+              <div className="single">
+                <img src={pics[0]} alt="" />
+              </div>
+            )
+          }
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 4 }}>
+              {pics.map((p, i) => (
+                <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: '1.5px solid var(--line)', aspectRatio: '4/3' }}>
+                  <img src={p} alt={`फ़ोटो ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </div>
+              ))}
+            </div>
+          )
+        })()}
 
         {(c.status === 'काम पूरा' || c.status === 'पूरा') && c.after_photo_url && (
           <div className="single" style={{ marginTop: 12 }}>
@@ -86,9 +103,23 @@ export default async function ShikayatDetail({ params }: { params: Promise<{ cod
         <div className="mt">{c.code} · {c.mohalla} · {c.category}</div>
 
         {c.admin_note && (
-          <div style={{ marginTop: 12, padding: '12px 14px', background: 'var(--surface)', borderRadius: 9, fontSize: 14, color: 'var(--ink2)' }}>
-            <b style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>जनसेवा टीम की टिप्पणी</b>
-            {c.admin_note}
+          <div style={{
+            marginTop: 14,
+            padding: '14px 18px',
+            background: '#F0FDF4',
+            border: '1.5px solid #86EFAC',
+            borderRadius: 12,
+            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 16 }}>💬</span>
+              <b style={{ color: '#166534', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                संचालक / जनसेवा टीम का विवरण
+              </b>
+            </div>
+            <p style={{ margin: 0, fontSize: 14.5, color: '#14532D', lineHeight: 1.55, fontWeight: 500 }}>
+              {c.admin_note}
+            </p>
           </div>
         )}
 

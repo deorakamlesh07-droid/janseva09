@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase, Shikayat, DainikKarya } from '@/lib/supabase'
+import {
+  exportComplaintsPdf,
+  exportSingleComplaintPdf,
+  exportCitizensPdf,
+  WhatsAppModal,
+  WhatsAppRecipient,
+  buildWhatsAppUrl,
+} from '@/lib/adminPdfAndWa'
 
-const TABS = ['शिकायतें', 'दैनिक कार्य', 'आँकड़े', 'नागरिक रिकॉर्ड (फ़ोन डायरेक्टरी)', 'खोया–पाया', 'ब्लड डोनर']
+const TABS = ['शिकायतें', 'दैनिक कार्य', 'आँकड़े', 'नागरिक रिकॉर्ड', 'खोया–पाया', 'ब्लड डोनर']
 
 function getNowFormatted() {
   const now = new Date()
@@ -23,6 +31,10 @@ export default function AdminPage() {
   const [needPhotoId, setNeedPhotoId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<Record<number, string>>({})
   const [filterStatus, setFilterStatus] = useState<string>('सब')
+  const [waModalOpen, setWaModalOpen] = useState(false)
+  const [waModalTitle, setWaModalTitle] = useState('')
+  const [waModalRecipients, setWaModalRecipients] = useState<WhatsAppRecipient[]>([])
+  const [adminNotes, setAdminNotes] = useState<Record<number, string>>({})
 
   // Auto-check existing session on load
   useEffect(() => {
@@ -76,12 +88,56 @@ export default function AdminPage() {
     }
   }
 
-  // 1. Direct status submit for "स्वीकृत" and "काम चालू" with auto date & time
+  // Helper to compute final admin_note: custom note if typed, or default timestamped note
+  function getNoteForSubmission(c: Shikayat, targetStatus: string) {
+    const timeStamp = getNowFormatted()
+    const custom = adminNotes[c.id] !== undefined ? adminNotes[c.id].trim() : (c.admin_note || '').trim()
+    if (custom) {
+      return custom.includes(timeStamp) ? custom : `${custom} (${timeStamp})`
+    }
+    return `${targetStatus} — ${timeStamp}`
+  }
+
+  // Save comment/description only without altering status
+  async function handleSaveNoteOnly(c: Shikayat) {
+    const custom = adminNotes[c.id] !== undefined ? adminNotes[c.id].trim() : (c.admin_note || '').trim()
+    if (!custom) return
+    setSavingId(c.id)
+    try {
+      const res = await fetch('/api/adm/complaint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: c.id,
+          status: c.status,
+          admin_note: custom,
+        }),
+      })
+      const result = await res.json()
+      if (res.ok && result.ok) {
+        setComplaints(prev =>
+          prev.map(item => item.id === c.id ? { ...item, admin_note: custom } : item)
+        )
+        setFeedback(prev => ({
+          ...prev,
+          [c.id]: `✓ संचालक टिप्पणी सुरक्षित हुई एवं नागरिक को ईमेल द्वारा भेजी गई`,
+        }))
+      } else {
+        alert(result.error || 'टिप्पणी सुरक्षित करने में समस्या आई।')
+      }
+    } catch (err: any) {
+      alert(err.message || 'नेटवर्क समस्या आई।')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  // 1. Direct status submit for "स्वीकृत" and "काम चालू" with auto date & time + optional comment
   async function handleDirectStatus(c: Shikayat, targetStatus: 'स्वीकृत' | 'काम चालू') {
     setSavingId(c.id)
     setNeedPhotoId(null)
     const timeStamp = getNowFormatted()
-    const note = `${targetStatus} — ${timeStamp}`
+    const note = getNoteForSubmission(c, targetStatus)
 
     try {
       const res = await fetch('/api/adm/complaint', {
@@ -104,7 +160,7 @@ export default function AdminPage() {
         )
         setFeedback(prev => ({
           ...prev,
-          [c.id]: `✓ ${targetStatus} सीधे पोर्टल पर दर्ज हुआ (${timeStamp})`,
+          [c.id]: `✓ ${targetStatus} दर्ज हुआ (${timeStamp}) · नागरिक को ईमेल भेजा गया`,
         }))
       } else {
         alert(result.error || 'पोर्टल पर दर्ज करने में समस्या आई।')
@@ -126,11 +182,11 @@ export default function AdminPage() {
       return
     }
 
-    // Photo already exists, submit directly with auto date & time
+    // Photo already exists, submit directly with auto date & time + optional comment
     setSavingId(c.id)
     setNeedPhotoId(null)
     const timeStamp = getNowFormatted()
-    const note = `काम पूरा — ${timeStamp}`
+    const note = getNoteForSubmission(c, 'काम पूरा')
 
     try {
       const res = await fetch('/api/adm/complaint', {
@@ -153,7 +209,7 @@ export default function AdminPage() {
         )
         setFeedback(prev => ({
           ...prev,
-          [c.id]: `✓ काम पूरा सीधे पोर्टल पर दर्ज हुआ (${timeStamp}) · नागरिक को समाधान ईमेल भेजा गया`,
+          [c.id]: `✓ काम पूरा दर्ज हुआ (${timeStamp}) · नागरिक को समाधान ईमेल भेजा गया`,
         }))
       } else {
         alert(result.error || 'पोर्टल पर दर्ज करने में समस्या आई।')
@@ -165,12 +221,12 @@ export default function AdminPage() {
     }
   }
 
-  // 3. Upload after-photo and directly submit "काम पूरा" with auto date & time
+  // 3. Upload after-photo and directly submit "काम पूरा" with auto date & time + optional comment
   async function handleAfterPhotoUpload(c: Shikayat, file: File) {
     setUploadingId(c.id)
     setNeedPhotoId(null)
     const timeStamp = getNowFormatted()
-    const note = `काम पूरा — ${timeStamp}`
+    const note = getNoteForSubmission(c, 'काम पूरा')
 
     try {
       const fd = new FormData()
@@ -195,7 +251,7 @@ export default function AdminPage() {
         )
         setFeedback(prev => ({
           ...prev,
-          [c.id]: `✓ काम की फ़ोटो अपलोड हुई और "काम पूरा" सीधे पोर्टल पर दर्ज हुआ (${timeStamp}) · नागरिक को समाधान ईमेल भेजा गया`,
+          [c.id]: `✓ काम की फ़ोटो अपलोड हुई और "काम पूरा" दर्ज हुआ (${timeStamp}) · नागरिक को समाधान ईमेल भेजा गया`,
         }))
       } else {
         alert(result.error || 'फ़ोटो अपलोड में समस्या आई। फिर कोशिश कीजिए।')
@@ -319,9 +375,33 @@ export default function AdminPage() {
           </button>
         </div>
 
-        <div className="admtabs">
+        <div
+          className="admtabs"
+          style={{
+            display: 'flex',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            whiteSpace: 'nowrap',
+            gap: 6,
+            scrollbarWidth: 'thin',
+          }}
+        >
           {TABS.map((t, i) => (
-            <button key={t} className={`admtab${tab === i ? ' on' : ''}`} onClick={() => setTab(i)}>
+            <button
+              key={t}
+              type="button"
+              className={`admtab${tab === i ? ' on' : ''}`}
+              style={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                touchAction: 'pan-x',
+              }}
+              onClick={(e) => {
+                setTab(i)
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+              }}
+            >
               {t}
             </button>
           ))}
@@ -416,19 +496,53 @@ export default function AdminPage() {
 
         {tab === 0 && (
           <div>
-            {/* Filter buttons */}
-            <div className="filters" style={{ marginBottom: 16 }}>
-              {['सब', 'दर्ज', 'स्वीकृत', 'काम चालू', 'काम पूरा'].map(f => (
+            {/* Filter buttons & PDF/WhatsApp Action Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+              <div className="filters" style={{ margin: 0 }}>
+                {['सब', 'दर्ज', 'स्वीकृत', 'काम चालू', 'काम पूरा'].map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    className="chip"
+                    aria-pressed={filterStatus === f ? 'true' : 'false'}
+                    onClick={() => setFilterStatus(f)}
+                  >
+                    {f === 'दर्ज' ? 'नई (दर्ज)' : f}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
-                  key={f}
                   type="button"
-                  className="chip"
-                  aria-pressed={filterStatus === f ? 'true' : 'false'}
-                  onClick={() => setFilterStatus(f)}
+                  className="citizen-act-btn"
+                  onClick={() => exportComplaintsPdf(filteredComplaints, filterStatus)}
+                  style={{ background: '#FFF3E8', color: '#D95C00', border: '1.5px solid #F5C490', fontWeight: 700 }}
+                  title="सभी विवरण सहित PDF डाउनलोड करें (फ़ोन, ईमेल, स्थिति व विवरण पूर्णतः दृश्यमान)"
                 >
-                  {f === 'दर्ज' ? 'नई (दर्ज)' : f}
+                  📄 शिकायतें PDF डाउनलोड ({filteredComplaints.length})
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  className="citizen-act-btn wa"
+                  onClick={() => {
+                    const recips: WhatsAppRecipient[] = filteredComplaints.map(c => ({
+                      name: c.name,
+                      phone: c.phone,
+                      mohalla: c.mohalla,
+                      code: c.code,
+                      detail: c.detail,
+                    }))
+                    setWaModalTitle(`शिकायतकर्ताओं को WhatsApp संदेश (${recips.length})`)
+                    setWaModalRecipients(recips)
+                    setWaModalOpen(true)
+                  }}
+                  title="वर्तमान फ़िल्टर के सभी शिकायतकर्ताओं को WhatsApp संदेश भेजें"
+                >
+                  💬 सभी को WhatsApp भेजें
+                </button>
+              </div>
             </div>
 
             {filteredComplaints.length === 0 ? (
@@ -478,6 +592,16 @@ export default function AdminPage() {
                           {c.phone}
                         </a>
                       </span>
+                      <a
+                        href={buildWhatsAppUrl(c.phone, `नमस्ते ${c.name} जी, आपकी वार्ड 09 शिकायत (कोड: ${c.code}) के संदर्भ में सूचना: `, true)}
+                        target="_blank"
+                        rel="noopener"
+                        className="citizen-act-btn wa"
+                        style={{ padding: '2px 8px', fontSize: 12, borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                        title="सीधे WhatsApp पर संपर्क करें"
+                      >
+                        <span>💬 WhatsApp</span>
+                      </a>
                       {(c.email || (c.detail && c.detail.includes('ईमेल:'))) && (
                         <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '2px 8px', borderRadius: 4, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           <span>✉️</span>
@@ -492,23 +616,34 @@ export default function AdminPage() {
                     </div>
 
                     {/* Photos: Before & After */}
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                      {c.photo_url && (
-                        <div>
-                          <div style={{ fontSize: 11, color: 'var(--ink2)', marginBottom: 3, fontWeight: 600 }}>
-                            शिकायत की फ़ोटो
+                    <div style={{ marginBottom: 10 }}>
+                      {/* Complaint photos (up to 3) */}
+                      {(() => {
+                        const pics: string[] = c.photo_urls && c.photo_urls.length > 0 ? c.photo_urls : c.photo_url ? [c.photo_url] : []
+                        if (pics.length === 0) return null
+                        return (
+                          <div>
+                            <div style={{ fontSize: 11, color: 'var(--ink2)', marginBottom: 5, fontWeight: 600 }}>
+                              शिकायत की फ़ोटो ({pics.length})
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {pics.map((url, idx) => (
+                                <img
+                                  key={idx}
+                                  className="admphoto"
+                                  src={url}
+                                  alt={`शिकायत फ़ोटो ${idx + 1}`}
+                                  onClick={() => window.open(url, '_blank')}
+                                  style={{ cursor: 'pointer', maxWidth: pics.length === 1 ? '100%' : '110px', flex: pics.length > 1 ? '1 1 100px' : undefined }}
+                                />
+                              ))}
+                            </div>
                           </div>
-                          <img
-                            className="admphoto"
-                            src={c.photo_url}
-                            alt="शिकायत फ़ोटो"
-                            onClick={() => window.open(c.photo_url!, '_blank')}
-                            style={{ cursor: 'pointer' }}
-                          />
-                        </div>
-                      )}
+                        )
+                      })()}
+                      {/* After photo */}
                       {c.after_photo_url && (
-                        <div>
+                        <div style={{ marginTop: 8 }}>
                           <div style={{ fontSize: 11, color: '#059669', marginBottom: 3, fontWeight: 700 }}>
                             ✓ काम के बाद की फ़ोटो
                           </div>
@@ -577,10 +712,61 @@ export default function AdminPage() {
                       onChange={e => e.target.files?.[0] && handleAfterPhotoUpload(c, e.target.files[0])}
                     />
 
+                    {/* Optional Comment / Description box for Sanchalak */}
+                    <div style={{ marginTop: 12, marginBottom: 10, background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
+                        <label htmlFor={`admin-note-${c.id}`} style={{ fontSize: 12, fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span>💬</span>
+                          <span>संचालक विवरण / टिप्पणी (वैकल्पिक):</span>
+                        </label>
+                        <span style={{ fontSize: 11, color: '#64748B', fontWeight: 500 }}>
+                          पब्लिक को दिखेगा व नागरिक को ईमेल जाएगा
+                        </span>
+                      </div>
+                      <textarea
+                        id={`admin-note-${c.id}`}
+                        rows={2}
+                        value={adminNotes[c.id] !== undefined ? adminNotes[c.id] : (c.admin_note || '')}
+                        onChange={e => setAdminNotes(prev => ({ ...prev, [c.id]: e.target.value }))}
+                        placeholder="जैसे — जायजा लिया गया है, टीम मौके पर रवाना, 2 दिन में काम होगा..."
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          fontSize: 13,
+                          borderRadius: 6,
+                          border: '1.5px solid #CBD5E1',
+                          background: '#FFFFFF',
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                          boxSizing: 'border-box',
+                          outline: 'none',
+                        }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 5 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveNoteOnly(c)}
+                          disabled={savingId === c.id}
+                          style={{
+                            background: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            color: '#334155',
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            padding: '4px 10px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          💾 केवल टिप्पणी अपडेट करें
+                        </button>
+                      </div>
+                    </div>
+
                     {/* 3 Status Action Buttons for Sanchalak */}
-                    <div style={{ marginTop: 12 }}>
+                    <div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', marginBottom: 6 }}>
-                        संचालक विकल्प (क्लिक करते ही तारीख़ व समय के साथ सीधे पोर्टल पर दर्ज होगा):
+                        संचालक विकल्प (क्लिक करते ही तारीख़, समय व ऊपर दी गई टिप्पणी सहित पोर्टल पर दर्ज होगा):
                       </div>
                       <div className="status-buttons">
                         {/* 1. स्वीकृत */}
@@ -647,6 +833,26 @@ export default function AdminPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => exportSingleComplaintPdf(c)}
+                        style={{
+                          background: '#EFF6FF',
+                          border: '1px solid #BFDBFE',
+                          color: '#1E40AF',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: '3px 10px',
+                          borderRadius: 6,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                        title="इस शिकायत की आधिकारिक PDF पर्ची डाउनलोड / प्रिंट करें"
+                      >
+                        📄 PDF पर्ची
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => removeComplaint(c.id)}
                         style={{
                           background: 'none',
@@ -668,9 +874,33 @@ export default function AdminPage() {
         )}
 
         {tab === 1 && <DainikKaryaTab />}
-        {tab === 3 && <CitizensTab />}
+        {tab === 3 && (
+          <CitizensTab
+            onOpenWaModal={(t, r) => {
+              setWaModalTitle(t)
+              setWaModalRecipients(r)
+              setWaModalOpen(true)
+            }}
+          />
+        )}
         {tab === 4 && <KhoyaTab />}
-        {tab === 5 && <BloodTab />}
+        {tab === 5 && (
+          <BloodTab
+            onOpenWaModal={(t, r) => {
+              setWaModalTitle(t)
+              setWaModalRecipients(r)
+              setWaModalOpen(true)
+            }}
+          />
+        )}
+
+        {waModalOpen && (
+          <WhatsAppModal
+            title={waModalTitle}
+            recipients={waModalRecipients}
+            onClose={() => setWaModalOpen(false)}
+          />
+        )}
       </div>
     </section>
   )
@@ -679,6 +909,7 @@ export default function AdminPage() {
 interface CitizenItem {
   phone: string
   name: string
+  email?: string | null
   mohalla: string
   complaintCount: number
   complaints: Array<{
@@ -689,6 +920,7 @@ interface CitizenItem {
     detail: string
     created_at: string
     photo_url: string | null
+    photo_urls?: string[] | null
     after_photo_url: string | null
   }>
   bloodGroup: string | null
@@ -698,7 +930,7 @@ interface CitizenItem {
   tags: string[]
 }
 
-function CitizensTab() {
+function CitizensTab({ onOpenWaModal }: { onOpenWaModal?: (title: string, recips: WhatsAppRecipient[]) => void }) {
   const [citizens, setCitizens] = useState<CitizenItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -760,10 +992,11 @@ function CitizensTab() {
 
   function exportCSV() {
     const rows = [
-      ['नाम', 'मोबाइल नंबर', 'मोहल्ला', 'कुल शिकायतें', 'ब्लड ग्रुप', 'टैग्स', 'अंतिम गतिविधि'],
+      ['नाम', 'मोबाइल नंबर', 'ईमेल पता', 'मोहल्ला', 'कुल शिकायतें', 'ब्लड ग्रुप', 'टैग्स', 'अंतिम गतिविधि'],
       ...filtered.map(c => [
         `"${c.name}"`,
         `"${c.phone}"`,
+        `"${c.email || '—'}"`,
         `"${c.mohalla}"`,
         c.complaintCount,
         `"${c.bloodGroup || '—'}"`,
@@ -840,6 +1073,30 @@ function CitizensTab() {
           <button
             type="button"
             className="citizen-act-btn"
+            onClick={() => exportCitizensPdf(filtered, filter)}
+            style={{ background: '#FFF3E8', color: '#D95C00', border: '1.5px solid #F5C490', fontWeight: 700 }}
+            title="सभी विवरण सहित PDF डाउनलोड करें (फ़ोन नंबर व ईमेल पूर्णतः दृश्यमान)"
+          >
+            📄 PDF डायरेक्टरी डाउनलोड ({filtered.length})
+          </button>
+          <button
+            type="button"
+            className="citizen-act-btn wa"
+            onClick={() => {
+              const recips: WhatsAppRecipient[] = filtered.map(c => ({
+                name: c.name,
+                phone: c.phone,
+                mohalla: c.mohalla,
+              }))
+              onOpenWaModal?.(`नागरिकों को WhatsApp संदेश (${recips.length})`, recips)
+            }}
+            title="वर्तमान फ़िल्टर के सभी नागरिकों को WhatsApp संदेश भेजें"
+          >
+            💬 सभी को WhatsApp भेजें
+          </button>
+          <button
+            type="button"
+            className="citizen-act-btn"
             onClick={copyAllPhones}
             title="सभी फ़िल्टर किए गए नंबर कॉपी करें"
           >
@@ -912,6 +1169,15 @@ function CitizensTab() {
                   📞 {c.phone}
                 </a>
 
+                {c.email && (
+                  <span style={{ fontSize: 12.5, color: '#1E40AF', background: '#EFF6FF', padding: '2px 8px', borderRadius: 4, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <span>✉️</span>
+                    <a href={`mailto:${c.email}`} style={{ color: '#1E40AF', textDecoration: 'none' }}>
+                      {c.email}
+                    </a>
+                  </span>
+                )}
+
                 <button
                   type="button"
                   className="citizen-act-btn"
@@ -922,7 +1188,7 @@ function CitizensTab() {
 
                 <a
                   className="citizen-act-btn wa"
-                  href={`https://wa.me/91${c.phone}`}
+                  href={buildWhatsAppUrl(c.phone, `नमस्ते ${c.name} जी, वार्ड 09 पार्षद कार्यालय (संजय बिश्नोई (जाणी)) की ओर से...`, true)}
                   target="_blank"
                   rel="noopener"
                   title="WhatsApp पर मैसेज करें"
@@ -1034,13 +1300,41 @@ function KhoyaTab() {
   )
 }
 
-function BloodTab() {
+function BloodTab({ onOpenWaModal }: { onOpenWaModal?: (title: string, recips: WhatsAppRecipient[]) => void }) {
   const [donors, setDonors] = useState<{ id: number; name: string; blood_group: string; mohalla: string; phone: string; created_at: string }[]>([])
   useEffect(() => {
     supabase.from('blood_donors').select('*').order('created_at', { ascending: false }).then(({ data }) => setDonors(data || []))
   }, [])
   return (
     <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 17, color: 'var(--ink)', fontWeight: 800 }}>
+            🩸 पंजीकृत ब्लड डोनर्स ({donors.length})
+          </h3>
+          <div style={{ fontSize: 12.5, color: 'var(--ink2)', marginTop: 2 }}>
+            आपातकाल में सभी डोनर्स को WhatsApp संदेश भेजें
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="citizen-act-btn wa"
+            onClick={() => {
+              const recips: WhatsAppRecipient[] = donors.map(d => ({
+                name: d.name,
+                phone: d.phone,
+                mohalla: d.mohalla,
+              }))
+              onOpenWaModal?.(`ब्लड डोनर्स को WhatsApp संदेश (${recips.length})`, recips)
+            }}
+            title="सभी पंजीकृत ब्लड डोनर्स को WhatsApp संदेश भेजें"
+          >
+            💬 सभी डोनर्स को WhatsApp संदेश
+          </button>
+        </div>
+      </div>
+
       {donors.map(d => (
         <div key={d.id} className="admrow">
           <div className="admtop">
@@ -1048,7 +1342,16 @@ function BloodTab() {
             <span>{new Date(d.created_at).toLocaleDateString('hi-IN')}</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--ink2)' }}>📍 {d.mohalla} · 📞 {d.phone}</div>
-          <div className="admcontrols" style={{ marginTop: 10 }}>
+          <div className="admcontrols" style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <a
+              className="citizen-act-btn wa"
+              href={buildWhatsAppUrl(d.phone, `नमस्ते ${d.name} जी, वार्ड 09 ब्लड डोनर सेवा (पार्षद संजय बिश्नोई (जाणी) कार्यालय) की ओर से संपर्क...`, true)}
+              target="_blank"
+              rel="noopener"
+              style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }}
+            >
+              💬 WhatsApp
+            </a>
             <button
               className="danger"
               onClick={async () => {
@@ -1079,15 +1382,17 @@ function DainikKaryaTab() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
-  // Form inputs
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [workDate, setWorkDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [area, setArea] = useState('')
   const [category, setCategory] = useState('सफ़ाई कार्य')
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  // Multiple photos support
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
+  const [photoFiles, setPhotoFiles] = useState<File[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const MAX_PHOTOS = 8
 
   useEffect(() => {
     fetchList()
@@ -1108,16 +1413,37 @@ function DainikKaryaTab() {
     }
   }
 
-  function handleFile(file: File) {
-    setPhotoFile(file)
-    const reader = new FileReader()
-    reader.onload = e => setPhotoPreview(e.target?.result as string)
-    reader.readAsDataURL(file)
+  function handleFiles(files: FileList | null) {
+    if (!files) return
+    const newFiles = Array.from(files)
+    setPhotoFiles(prev => {
+      const combined = [...prev, ...newFiles].slice(0, MAX_PHOTOS)
+      return combined
+    })
+    setPhotoPreviews(prev => {
+      const existing = [...prev]
+      const toRead = newFiles.slice(0, MAX_PHOTOS - prev.length)
+      toRead.forEach(file => {
+        const reader = new FileReader()
+        reader.onload = e => {
+          setPhotoPreviews(p => [...p, e.target?.result as string].slice(0, MAX_PHOTOS))
+        }
+        reader.readAsDataURL(file)
+      })
+      return existing
+    })
+    // Reset input so same files can be re-selected
+    if (fileRef.current) fileRef.current.value = ''
   }
 
-  function clearPhoto() {
-    setPhotoFile(null)
-    setPhotoPreview(null)
+  function removePhoto(index: number) {
+    setPhotoFiles(prev => prev.filter((_, i) => i !== index))
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function clearAllPhotos() {
+    setPhotoFiles([])
+    setPhotoPreviews([])
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -1138,9 +1464,8 @@ function DainikKaryaTab() {
       fd.append('work_date', workDate)
       fd.append('area', area.trim())
       fd.append('category', category)
-      if (photoFile) {
-        fd.append('photo', photoFile)
-      }
+      // Append each photo as photos[]
+      photoFiles.forEach(file => fd.append('photos[]', file))
 
       const res = await fetch('/api/dainik-karya', {
         method: 'POST',
@@ -1149,11 +1474,11 @@ function DainikKaryaTab() {
       const json = await res.json()
 
       if (res.ok && json.ok) {
-        setMsg({ type: 'ok', text: '✓ दैनिक कार्य सफलतापूर्वक प्रकाशित हुआ और नागरिकों के लिए वेब पर लाइव है!' })
+        setMsg({ type: 'ok', text: `✓ दैनिक कार्य सफलतापूर्वक प्रकाशित हुआ${photoFiles.length > 0 ? ` (${photoFiles.length} फ़ोटो के साथ)` : ''} और नागरिकों के लिए वेब पर लाइव है!` })
         setTitle('')
         setDescription('')
         setArea('')
-        clearPhoto()
+        clearAllPhotos()
         fetchList()
       } else {
         setMsg({ type: 'err', text: json.error || 'दैनिक कार्य प्रकाशित करने में समस्या आई।' })
@@ -1328,19 +1653,124 @@ function DainikKaryaTab() {
             />
           </div>
 
-          {/* Photo input */}
+          {/* Photo input: multiple photos */}
           <div className="f" style={{ marginBottom: 20 }}>
-            <label>कार्य की फ़ोटो (प्रमाण तस्वीर - ऐच्छिक पर अनुशंसित)</label>
+            <label>
+              कार्य की फ़ोटो (अधिकतम {MAX_PHOTOS} फ़ोटो — ऐच्छिक पर अनुशंसित)
+            </label>
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
+              multiple
               style={{ display: 'none' }}
-              onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+              onChange={e => handleFiles(e.target.files)}
             />
 
-            {!photoPreview ? (
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {/* Thumbnail previews grid */}
+            {photoPreviews.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                  marginBottom: 10,
+                  marginTop: 8,
+                }}
+              >
+                {photoPreviews.map((src, idx) => (
+                  <div
+                    key={idx}
+                    style={{ position: 'relative', width: 90, height: 90 }}
+                  >
+                    <img
+                      src={src}
+                      alt={`preview-${idx + 1}`}
+                      style={{
+                        width: 90,
+                        height: 90,
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        border: '1.5px solid var(--line)',
+                        display: 'block',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -6,
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: '#DC2626',
+                        color: '#fff',
+                        border: 0,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                      }}
+                      title="यह फ़ोटो हटाएं"
+                    >
+                      ✕
+                    </button>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        color: '#fff',
+                        fontSize: 10,
+                        textAlign: 'center',
+                        padding: '2px 0',
+                        borderRadius: '0 0 7px 7px',
+                      }}
+                    >
+                      {idx + 1}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add more button if below limit */}
+                {photoPreviews.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    style={{
+                      width: 90,
+                      height: 90,
+                      borderRadius: 8,
+                      border: '2px dashed var(--amber)',
+                      background: '#FFF8F3',
+                      color: 'var(--amber)',
+                      fontSize: 26,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 2,
+                    }}
+                    title="और फ़ोटो जोड़ें"
+                  >
+                    <span>+</span>
+                    <span style={{ fontSize: 10, fontWeight: 700 }}>फ़ोटो</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {photoPreviews.length === 0 && (
                 <button
                   type="button"
                   className="s-btn btn-wip"
@@ -1349,17 +1779,11 @@ function DainikKaryaTab() {
                 >
                   📷 फ़ोटो खींचिए या गैलरी से चुनिए
                 </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 8 }}>
-                <img
-                  src={photoPreview}
-                  alt="preview"
-                  style={{ maxHeight: 140, borderRadius: 8, border: '1.5px solid var(--line)', objectFit: 'cover' }}
-                />
+              )}
+              {photoPreviews.length > 0 && (
                 <button
                   type="button"
-                  onClick={clearPhoto}
+                  onClick={clearAllPhotos}
                   style={{
                     background: '#FEE2E2',
                     color: '#DC2626',
@@ -1371,10 +1795,13 @@ function DainikKaryaTab() {
                     cursor: 'pointer',
                   }}
                 >
-                  ✕ फ़ोटो हटाएं
+                  ✕ सभी फ़ोटो हटाएं ({photoPreviews.length})
                 </button>
-              </div>
-            )}
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink2)', marginTop: 5 }}>
+              अधिकतम {MAX_PHOTOS} फ़ोटो, प्रत्येक 10MB तक · JPG, PNG, WebP
+            </div>
           </div>
 
           <button
@@ -1447,23 +1874,39 @@ function DainikKaryaTab() {
                   {item.description}
                 </p>
 
-                {item.photo_url && (
-                  <div style={{ marginTop: 8 }}>
-                    <img
-                      src={item.photo_url}
-                      alt={item.title}
-                      onClick={() => window.open(item.photo_url!, '_blank')}
-                      style={{
-                        maxHeight: 120,
-                        borderRadius: 8,
-                        border: '1.5px solid var(--line)',
-                        cursor: 'pointer',
-                        objectFit: 'cover',
-                      }}
-                      title="बड़ा देखने के लिए क्लिक करें"
-                    />
-                  </div>
-                )}
+                {/* Photos strip in admin list */}
+                {(() => {
+                  const urls: string[] = item.photo_urls && item.photo_urls.length > 0
+                    ? item.photo_urls
+                    : item.photo_url ? [item.photo_url] : []
+                  if (urls.length === 0) return null
+                  return (
+                    <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {urls.map((url, idx) => (
+                        <img
+                          key={idx}
+                          src={url}
+                          alt={`${item.title} - ${idx + 1}`}
+                          onClick={() => window.open(url, '_blank')}
+                          style={{
+                            width: 80,
+                            height: 80,
+                            borderRadius: 8,
+                            border: '1.5px solid var(--line)',
+                            cursor: 'pointer',
+                            objectFit: 'cover',
+                          }}
+                          title="बड़ा देखने के लिए क्लिक करें"
+                        />
+                      ))}
+                      {urls.length > 1 && (
+                        <span style={{ fontSize: 12, color: 'var(--ink2)', alignSelf: 'flex-end', paddingBottom: 4 }}>
+                          {urls.length} फ़ोटो
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             ))}
           </div>

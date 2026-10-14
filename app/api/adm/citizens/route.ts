@@ -5,6 +5,7 @@ import { verifyAdminSession } from '@/lib/auth'
 export interface CitizenRecord {
   phone: string
   name: string
+  email: string | null
   mohalla: string
   complaintCount: number
   complaints: Array<{
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     // 1. Fetch from shikayat
     const { data: complaints, error: cErr } = await supabase
       .from('shikayat')
-      .select('id, code, name, phone, mohalla, category, status, detail, created_at, photo_url, after_photo_url')
+      .select('id, code, name, phone, email, mohalla, category, status, detail, created_at, photo_url, after_photo_url')
       .neq('status', 'हटाई')
       .order('created_at', { ascending: false })
 
@@ -102,6 +103,8 @@ export async function GET(req: NextRequest) {
           after_photo_url: item.after_photo_url,
         }
 
+        const itemEmail = item.email || (item.detail && item.detail.match(/(?:ईमेल|email)\s*:\s*([^\s\n\r]+@[^\s\n\r]+)/i)?.[1]) || null
+
         if (existing) {
           existing.complaints.push(complaintSummary)
           existing.complaintCount += 1
@@ -110,11 +113,13 @@ export async function GET(req: NextRequest) {
           }
           if (!existing.mohalla && item.mohalla) existing.mohalla = item.mohalla
           if (!existing.name && item.name) existing.name = item.name
+          if (!existing.email && itemEmail) existing.email = itemEmail
           if (!existing.tags.includes('शिकायतकर्ता')) existing.tags.push('शिकायतकर्ता')
         } else {
           map.set(phone, {
             phone,
             name: item.name || 'अज्ञात नागरिक',
+            email: itemEmail,
             mohalla: item.mohalla || '',
             complaintCount: 1,
             complaints: [complaintSummary],
@@ -146,6 +151,7 @@ export async function GET(req: NextRequest) {
           map.set(phone, {
             phone,
             name: d.name || 'अज्ञात डोनर',
+            email: null,
             mohalla: d.mohalla || '',
             complaintCount: 0,
             complaints: [],
@@ -176,6 +182,7 @@ export async function GET(req: NextRequest) {
           map.set(phone, {
             phone,
             name: k.name || 'नागरिक',
+            email: null,
             mohalla: k.area || '',
             complaintCount: 0,
             complaints: [],
@@ -200,10 +207,12 @@ export async function GET(req: NextRequest) {
           if (c.notes) existing.notes = c.notes
           if (c.name && (!existing.name || existing.name === 'अज्ञात नागरिक')) existing.name = c.name
           if (c.mohalla && !existing.mohalla) existing.mohalla = c.mohalla
+          if (c.email && !existing.email) existing.email = c.email
         } else {
           map.set(phone, {
             phone,
             name: c.name || 'नागरिक',
+            email: c.email || null,
             mohalla: c.mohalla || '',
             complaintCount: 0,
             complaints: [],

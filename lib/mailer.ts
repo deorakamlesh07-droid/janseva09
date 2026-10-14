@@ -28,6 +28,7 @@ interface ComplaintEmailProps {
   category: string
   detail: string
   photo_url?: string | null
+  photo_urls?: string[] | null
   latitude?: string | null
   longitude?: string | null
   createdAt?: string
@@ -35,31 +36,29 @@ interface ComplaintEmailProps {
 
 function getMailTransporter() {
   const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com'
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10)
-  const smtpUser = process.env.SMTP_USER || ''
-  const smtpPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '')
+  const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10)
+  const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
+  const smtpPass = (process.env.SMTP_PASS || 'vcowjybhpafxeugt').replace(/\s+/g, '')
 
   if (!smtpUser || !smtpPass) return null
 
-  return smtpHost.includes('gmail')
-    ? nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: smtpUser, pass: smtpPass },
-      })
-    : nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: { user: smtpUser, pass: smtpPass },
-      })
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+  })
 }
 
 export async function sendComplaintNotificationEmail(props: ComplaintEmailProps) {
-  const { code, name, phone, email, mohalla, category, detail, photo_url, latitude, longitude } = props
+  const { code, name, phone, email, mohalla, category, detail, photo_url, photo_urls, latitude, longitude } = props
 
-  const toEmail = process.env.SANCHALAK_EMAIL || process.env.SMTP_USER || ''
-  const smtpUser = process.env.SMTP_USER || ''
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
+  const toEmail = process.env.SANCHALAK_EMAIL || process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
+  const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
+  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
   const appUrl = getAppUrl()
 
   if (!toEmail) {
@@ -81,7 +80,7 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
     const htmlContent = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
         <div style="background: #111827; padding: 24px 28px; color: #ffffff;">
-          <div style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">वार्ड मित्र 09 · संचालक सूचना</div>
+          <div style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">वार्ड मित्र 08 · संचालक सूचना</div>
           <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.3;">नई नागरिक शिकायत प्राप्त हुई</h1>
           <div style="margin-top: 10px; display: inline-block; background: #f59e0b; color: #111827; font-weight: 800; padding: 4px 12px; border-radius: 6px; font-size: 15px;">
             कोड: ${code}
@@ -127,18 +126,24 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
             ${detail}
           </div>
 
-          ${
-            photo_url
-              ? `
+          ${(() => {
+            const photos = photo_urls && photo_urls.length > 0 ? photo_urls : (photo_url ? [photo_url] : [])
+            if (photos.length === 0) return ''
+            return `
             <div style="margin-bottom: 24px;">
-              <h3 style="font-size: 14px; margin: 0 0 10px 0; color: #4b5563;">नागरिक द्वारा संलग्न फ़ोटो:</h3>
-              <a href="${photo_url}" target="_blank">
-                <img src="${photo_url}" alt="शिकायत फ़ोटो" style="max-width: 100%; height: auto; max-height: 280px; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: cover;" />
-              </a>
+              <h3 style="font-size: 14px; margin: 0 0 10px 0; color: #4b5563;">नागरिक द्वारा संलग्न फ़ोटो (${photos.length}):</h3>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                ${photos.map((p, idx) => `
+                  <div style="flex: 1; min-width: 140px; max-width: 260px;">
+                    <a href="${p}" target="_blank">
+                      <img src="${p}" alt="शिकायत फ़ोटो ${idx + 1}" style="width: 100%; height: auto; max-height: 240px; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: cover; display: block;" />
+                    </a>
+                  </div>
+                `).join('')}
+              </div>
             </div>
-          `
-              : ''
-          }
+            `
+          })()}
 
           <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; flex-wrap: wrap;">
             ${
@@ -160,13 +165,13 @@ export async function sendComplaintNotificationEmail(props: ComplaintEmailProps)
         </div>
 
         <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
-          यह ईमेल वार्ड मित्र 09 शिकायत रजिस्टर प्रणाली द्वारा स्वतः भेजा गया है।
+          यह ईमेल वार्ड मित्र 08 शिकायत रजिस्टर प्रणाली द्वारा स्वतः भेजा गया है।
         </div>
       </div>
     `
 
     const textContent = `
-वार्ड मित्र 09 · संचालक सूचना
+वार्ड मित्र 08 · संचालक सूचना
 नई नागरिक शिकायत प्राप्त हुई: कोड ${code}
 
 नागरिक का नाम: ${name}
@@ -177,7 +182,10 @@ ${email ? `ईमेल पता: ${email}\n` : ''}मोहल्ला: ${moh
 विवरण:
 ${detail}
 
-${photo_url ? `फ़ोटो लिंक: ${photo_url}\n` : ''}
+${(() => {
+  const photos = photo_urls && photo_urls.length > 0 ? photo_urls : (photo_url ? [photo_url] : [])
+  return photos.map((p, idx) => `फ़ोटो ${idx + 1} लिंक: ${p}`).join('\n') + (photos.length > 0 ? '\n' : '')
+})()}
 संचालक पोर्टल: ${admUrl}
 सार्वजनिक लिंक: ${publicUrl}
     `
@@ -185,7 +193,7 @@ ${photo_url ? `फ़ोटो लिंक: ${photo_url}\n` : ''}
     const info = await transporter.sendMail({
       from: smtpFrom,
       to: toEmail,
-      subject: `[वार्ड मित्र 09] नई शिकायत दर्ज हुई — ${code} (${category})`,
+      subject: `[वार्ड मित्र 08] नई शिकायत दर्ज हुई — ${code} (${category})`,
       text: textContent,
       html: htmlContent,
     })
@@ -224,8 +232,8 @@ export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailPr
     return { ok: false, message: 'SMTP क्रेडेंशियल सेट नहीं हैं।' }
   }
 
-  const smtpUser = process.env.SMTP_USER || ''
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
+  const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
+  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
   const appUrl = getAppUrl()
   const codeSlug = toCodeSlug(code)
   const publicUrl = `${appUrl}/s/${codeSlug}`
@@ -315,13 +323,13 @@ export async function sendComplaintResolvedEmail(props: ComplaintResolvedEmailPr
 
         <!-- Footer -->
         <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
-          वार्ड 09 जनसेवा · संजय बिश्नोई (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
+          वार्ड 09 जनसेवा · फतेहराज माकड़ (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
         </div>
       </div>
     `
 
     const textContent = `
-वार्ड मित्र 09 · समाधान सूचना
+वार्ड मित्र 08 · समाधान सूचना
 नमस्ते ${name} जी,
 
 आपकी शिकायत (कोड: ${code}) का समाधान सफलता से कर दिया गया है!
@@ -341,7 +349,7 @@ ${after_photo_url ? `समाधान फ़ोटो प्रमाण: ${af
     const info = await transporter.sendMail({
       from: smtpFrom,
       to: toEmail,
-      subject: `[वार्ड मित्र 09] आपकी शिकायत का समाधान हो गया है — कोड: ${code}`,
+      subject: `[वार्ड मित्र 08] आपकी शिकायत का समाधान हो गया है — कोड: ${code}`,
       text: textContent,
       html: htmlContent,
     })
@@ -362,10 +370,11 @@ export interface ComplaintCitizenConfirmationProps {
   mohalla: string
   detail: string
   photo_url?: string | null
+  photo_urls?: string[] | null
 }
 
 export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCitizenConfirmationProps) {
-  const { code, name, toEmail, category, mohalla, detail, photo_url } = props
+  const { code, name, toEmail, category, mohalla, detail, photo_url, photo_urls } = props
 
   if (!toEmail || !toEmail.includes('@')) {
     console.log(`[Mailer] नागरिक ईमेल अनुपलब्ध है (${code}). पुष्टिकरण ईमेल नहीं भेजा गया।`)
@@ -378,8 +387,8 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
     return { ok: false, message: 'SMTP क्रेडेंशियल सेट नहीं हैं।' }
   }
 
-  const smtpUser = process.env.SMTP_USER || ''
-  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 09" <${smtpUser || 'noreply@wardmitra09.in'}>`
+  const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
+  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
   const appUrl = getAppUrl()
   const codeSlug = code.replace('/', '-')
   const publicUrl = `${appUrl}/s/${codeSlug}`
@@ -408,7 +417,7 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
         <div style="padding: 28px;">
           <p style="font-size: 15.5px; line-height: 1.6; color: #1f2937; margin: 0 0 18px 0;">
             नमस्ते <strong>${name} जी</strong>,<br>
-            वार्ड 09 जनसेवा पोर्टल पर आपकी शिकायत प्राप्त हो गई है। इसे वार्ड पार्षद श्री <strong>संजय बिश्नोई (पार्षद वार्ड 09)</strong> एवं वार्ड टीम के संज्ञान में दर्ज कर लिया गया है।
+            वार्ड 09 जनसेवा पोर्टल पर आपकी शिकायत प्राप्त हो गई है। इसे वार्ड पार्षद श्री <strong>फतेहराज माकड़ (पार्षद वार्ड 09)</strong> एवं वार्ड टीम के संज्ञान में दर्ज कर लिया गया है।
           </p>
 
           <!-- Status Highlight Card -->
@@ -440,21 +449,27 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
             </tr>
           </table>
 
-          <!-- Attached Photo (if any) -->
-          ${
-            photo_url
-              ? `
+          <!-- Attached Photo(s) (if any) -->
+          ${(() => {
+            const photos = photo_urls && photo_urls.length > 0 ? photo_urls : (photo_url ? [photo_url] : [])
+            if (photos.length === 0) return ''
+            return `
             <div style="margin: 20px 0; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px;">
-              <h3 style="font-size: 13.5px; margin: 0 0 8px 0; color: #4b5563; font-weight: 700;">
-                📷 आपके द्वारा संलग्न फ़ोटो:
+              <h3 style="font-size: 13.5px; margin: 0 0 10px 0; color: #4b5563; font-weight: 700;">
+                📷 आपके द्वारा संलग्न फ़ोटो (${photos.length}):
               </h3>
-              <a href="${photo_url}" target="_blank">
-                <img src="${photo_url}" alt="शिकायत फ़ोटो" style="max-width: 100%; height: auto; max-height: 240px; border-radius: 8px; border: 1px solid #d1d5db; object-fit: cover;" />
-              </a>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                ${photos.map((p, idx) => `
+                  <div style="flex: 1; min-width: 140px; max-width: 240px;">
+                    <a href="${p}" target="_blank">
+                      <img src="${p}" alt="शिकायत फ़ोटो ${idx + 1}" style="width: 100%; height: auto; max-height: 220px; border-radius: 8px; border: 1px solid #d1d5db; object-fit: cover; display: block;" />
+                    </a>
+                  </div>
+                `).join('')}
+              </div>
             </div>
-          `
-              : ''
-          }
+            `
+          })()}
 
           <!-- View Action Button -->
           <div style="margin-top: 24px; text-align: center;">
@@ -470,13 +485,13 @@ export async function sendComplaintCitizenConfirmationEmail(props: ComplaintCiti
 
         <!-- Footer -->
         <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
-          वार्ड 09 जनसेवा · संजय बिश्नोई (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
+          वार्ड 09 जनसेवा · फतेहराज माकड़ (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
         </div>
       </div>
     `
 
     const textContent = `
-वार्ड मित्र 09 · जनसेवा पावती
+वार्ड मित्र 08 · जनसेवा पावती
 नमस्ते ${name} जी,
 
 आपकी शिकायत सफलतापूर्वक दर्ज कर ली गई है!
@@ -493,7 +508,7 @@ ${detail}
 ${publicUrl}
 
 कृपया यह शिकायत नंबर (${code}) भविष्य के लिए सुरक्षित रखें। समाधान होने पर आपको पुनः ईमेल भेजा जाएगा।
-— संजय बिश्नोई (पार्षद वार्ड 09)
+— फतेहराज माकड़ (पार्षद वार्ड 09)
     `
 
     const info = await transporter.sendMail({
@@ -508,6 +523,221 @@ ${publicUrl}
     return { ok: true, messageId: info.messageId }
   } catch (err: any) {
     console.error(`[Mailer] नागरिक पुष्टिकरण ईमेल भेजने में त्रुटि (${toEmail}):`, err)
+    return { ok: false, error: err.message }
+  }
+}
+
+export interface ComplaintStatusUpdateEmailProps {
+  code: string
+  name: string
+  toEmail: string
+  category: string
+  mohalla: string
+  detail: string
+  status: string
+  admin_note?: string | null
+  after_photo_url?: string | null
+  photo_url?: string | null
+}
+
+export async function sendComplaintStatusUpdateEmail(props: ComplaintStatusUpdateEmailProps) {
+  const { code, name, toEmail, category, mohalla, detail, status, admin_note, after_photo_url } = props
+
+  if (!toEmail || !toEmail.includes('@')) {
+    console.log(`[Mailer] शिकायतकर्ता ईमेल अनुपलब्ध है (${code}). स्थिति अपडेट ईमेल नहीं भेजा गया।`)
+    return { ok: false, message: 'ईमेल पता नहीं दिया गया है।' }
+  }
+
+  const transporter = getMailTransporter()
+  if (!transporter) {
+    console.log(`[Mailer] SMTP क्रेडेंशियल सेट नहीं हैं। ईमेल नहीं भेजा जा सका (${code} -> ${toEmail})`)
+    return { ok: false, message: 'SMTP क्रेडेंशियल सेट नहीं हैं।' }
+  }
+
+  const smtpUser = process.env.SMTP_USER || 'deorakamlesh07@gmail.com'
+  const smtpFrom = process.env.SMTP_FROM || `"वार्ड मित्र 08" <${smtpUser}>`
+  const appUrl = getAppUrl()
+  const codeSlug = toCodeSlug(code)
+  const publicUrl = `${appUrl}/s/${codeSlug}`
+
+  // Configure theme, badge, and copy based on status
+  let headerBg = 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'
+  let badgeText = status
+  let titleText = `शिकायत स्थिति अपडेट: ${status}`
+  let subjectText = `[वार्ड 09 जनसेवा] आपकी शिकायत अपडेट — ${status} (कोड: ${code})`
+  let introText = `आपकी शिकायत (कोड: ${code}) की स्थिति अपडेट की गई है।`
+  let noteBg = '#f8fafc'
+  let noteBorder = '#cbd5e1'
+  let noteTitleColor = '#334155'
+  let noteTextColor = '#0f172a'
+
+  if (status === 'स्वीकृत') {
+    headerBg = 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 60%, #7c3aed 100%)'
+    badgeText = '✓ स्वीकृत (Approved)'
+    titleText = 'आपकी शिकायत स्वीकृत कर ली गई है'
+    subjectText = `[वार्ड 09 जनसेवा] आपकी शिकायत स्वीकृत हुई — कोड: ${code}`
+    introText = 'वार्ड पार्षद एवं संचालक टीम द्वारा आपकी शिकायत का संज्ञान लेकर इसे विधिवत स्वीकृत कर लिया गया है।'
+    noteBg = '#f5f3ff'
+    noteBorder = '#c4b5fd'
+    noteTitleColor = '#6d28d9'
+    noteTextColor = '#4c1d95'
+  } else if (status === 'काम चालू') {
+    headerBg = 'linear-gradient(135deg, #9a3412 0%, #c2410c 60%, #ea580c 100%)'
+    badgeText = '⏳ काम चालू (In Progress)'
+    titleText = 'आपकी शिकायत पर कार्य शुरू हो गया है'
+    subjectText = `[वार्ड 09 जनसेवा] आपकी शिकायत पर काम शुरू हुआ — कोड: ${code}`
+    introText = 'वार्ड 09 संचालक टीम द्वारा आपकी शिकायत के समाधान हेतु मौके पर कार्य प्रारंभ कर दिया गया है।'
+    noteBg = '#fffbeb'
+    noteBorder = '#fde68a'
+    noteTitleColor = '#b45309'
+    noteTextColor = '#78350f'
+  } else if (status === 'काम पूरा' || status === 'पूरा' || status === 'पूरा हुआ' || status === 'समाधान') {
+    headerBg = 'linear-gradient(135deg, #065f46 0%, #047857 60%, #059669 100%)'
+    badgeText = '✓ कार्य पूर्ण (Resolved)'
+    titleText = 'आपकी शिकायत का समाधान हो गया है!'
+    subjectText = `[वार्ड 09 जनसेवा] आपकी शिकायत का समाधान हो गया है — कोड: ${code}`
+    introText = 'वार्ड 09 संचालक टीम द्वारा आपकी शिकायत का समाधान सफलतापूर्वक कर दिया गया है।'
+    noteBg = '#f0fdf4'
+    noteBorder = '#86efac'
+    noteTitleColor = '#166534'
+    noteTextColor = '#14532d'
+  } else if (status === 'दर्ज') {
+    headerBg = 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%)'
+    badgeText = '📋 दर्ज (Registered)'
+    titleText = 'आपकी शिकायत पर संचालक की टिप्पणी'
+    subjectText = `[वार्ड 09 जनसेवा] आपकी शिकायत पर संचालक की टिप्पणी (कोड: ${code})`
+    introText = 'वार्ड 09 संचालक टीम द्वारा आपकी शिकायत पर विवरण / टिप्पणी दर्ज की गई है।'
+    noteBg = '#eff6ff'
+    noteBorder = '#bfdbfe'
+    noteTitleColor = '#1e40af'
+    noteTextColor = '#1e3a8a'
+  }
+
+  try {
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+        <!-- Top Header -->
+        <div style="background: ${headerBg}; padding: 26px 28px; color: #ffffff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.8px;">वार्ड 09 · जनसेवा स्थिति अपडेट</span>
+            <span style="background: rgba(255,255,255,0.22); font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; color: #ffffff;">${badgeText}</span>
+          </div>
+          <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 800; line-height: 1.3;">${titleText}</h1>
+          <div style="margin-top: 10px; display: inline-block; background: #ffffff; color: #111827; font-weight: 800; padding: 4px 14px; border-radius: 6px; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            शिकायत कोड: ${code}
+          </div>
+        </div>
+
+        <!-- Main Body -->
+        <div style="padding: 28px;">
+          <p style="font-size: 15.5px; line-height: 1.6; color: #1f2937; margin: 0 0 18px 0;">
+            नमस्ते <strong>${name} जी</strong>,<br>
+            ${introText}
+          </p>
+
+          <!-- Status Highlight Card -->
+          <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;">
+            <div style="font-size: 12.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">वर्तमान स्थिति</div>
+            <div style="font-size: 18px; font-weight: 800; color: #0f172a;">
+              ${badgeText}
+            </div>
+          </div>
+
+          <!-- Sanchalak Optional Comment Box (if provided) -->
+          ${
+            admin_note
+              ? `
+            <div style="background: ${noteBg}; border: 1.5px solid ${noteBorder}; border-radius: 10px; padding: 16px 20px; margin-bottom: 22px;">
+              <div style="font-size: 12.5px; font-weight: 700; color: ${noteTitleColor}; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                💬 <span>संचालक विवरण / टिप्पणी:</span>
+              </div>
+              <div style="font-size: 15px; font-weight: 600; color: ${noteTextColor}; line-height: 1.5;">
+                ${admin_note}
+              </div>
+            </div>
+          `
+              : ''
+          }
+
+          <!-- Complaint Details Table -->
+          <h2 style="font-size: 15px; margin: 0 0 12px 0; color: #374151; border-bottom: 2px solid #f3f4f6; padding-bottom: 6px;">शिकायत का विवरण</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280; width: 130px;">शिकायत श्रेणी:</td>
+              <td style="padding: 7px 0; color: #111827; font-weight: 700;">${category}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280;">मोहल्ला / क्षेत्र:</td>
+              <td style="padding: 7px 0; color: #111827; font-weight: 600;">${mohalla}</td>
+            </tr>
+            <tr>
+              <td style="padding: 7px 0; color: #6b7280; vertical-align: top;">समस्या:</td>
+              <td style="padding: 7px 0; color: #374151; font-size: 13.5px; line-height: 1.5;">${detail}</td>
+            </tr>
+          </table>
+
+          <!-- Photos Comparison (if after photo exists) -->
+          ${
+            after_photo_url
+              ? `
+            <div style="margin: 22px 0; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+              <h3 style="font-size: 14px; margin: 0 0 10px 0; color: #047857; font-weight: 700;">
+                ✓ काम के बाद की तस्वीर (समाधान प्रमाण):
+              </h3>
+              <a href="${after_photo_url}" target="_blank">
+                <img src="${after_photo_url}" alt="समाधान फ़ोटो" style="max-width: 100%; height: auto; max-height: 280px; border-radius: 8px; border: 1.5px solid #10b981; object-fit: cover;" />
+              </a>
+            </div>
+          `
+              : ''
+          }
+
+          <!-- View Action Button -->
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="${publicUrl}" target="_blank" style="background: #111827; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 3px 8px rgba(0,0,0,0.15);">
+              पोर्टल पर लाइव स्थिति देखें →
+            </a>
+          </div>
+
+          <div style="margin-top: 26px; padding-top: 16px; border-top: 1px solid #f3f4f6; font-size: 13px; color: #6b7280; line-height: 1.5;">
+            वार्ड 09 जनसेवा मंच पर पारदर्शिता के साथ हर नागरिक की शिकायत का समाधान किया जा रहा है।
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f9fafb; padding: 16px 28px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb;">
+          वार्ड 09 जनसेवा · फतेहराज माकड़ (पार्षद वार्ड 09) · जनसेवा 09 डिजिटल पोर्टल
+        </div>
+      </div>
+    `
+
+    const textContent = `
+वार्ड 09 जनसेवा · शिकायत स्थिति अपडेट
+नमस्ते ${name} जी,
+
+आपकी शिकायत (कोड: ${code}) की स्थिति अपडेट: ${status}
+${admin_note ? `संचालक विवरण / टिप्पणी: ${admin_note}\n` : ''}
+शिकायत श्रेणी: ${category}
+मोहल्ला: ${mohalla}
+
+पोर्टल पर लाइव स्थिति देखें: ${publicUrl}
+${after_photo_url ? `समाधान फ़ोटो प्रमाण: ${after_photo_url}\n` : ''}
+
+— वार्ड 09 जनसेवा
+    `
+
+    const info = await transporter.sendMail({
+      from: smtpFrom,
+      to: toEmail,
+      subject: subjectText,
+      text: textContent,
+      html: htmlContent,
+    })
+
+    console.log(`[Mailer] स्थिति अपडेट ईमेल भेजा गया: ${info.messageId} to ${toEmail} for ${code} (${status})`)
+    return { ok: true, messageId: info.messageId }
+  } catch (err: any) {
+    console.error(`[Mailer] स्थिति अपडेट ईमेल भेजने में त्रुटि (${toEmail}):`, err)
     return { ok: false, error: err.message }
   }
 }

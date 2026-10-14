@@ -2,7 +2,13 @@ import { getServiceClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { verifyAdminSession } from '@/lib/auth'
-import { sendComplaintResolvedEmail } from '@/lib/mailer'
+import { sendComplaintStatusUpdateEmail } from '@/lib/mailer'
+
+// Increase Vercel serverless timeout to 60s so nodemailer has time to connect and send email
+export const maxDuration = 60
+
+/** Statuses that trigger citizen email notification */
+const NOTIFIABLE_STATUSES = new Set(['दर्ज', 'स्वीकृत', 'काम चालू', 'काम पूरा', 'पूरा', 'पूरा हुआ', 'समाधान'])
 
 function extractComplainantEmail(record: any): string | null {
   if (record?.email && typeof record.email === 'string' && record.email.includes('@')) {
@@ -17,24 +23,32 @@ function extractComplainantEmail(record: any): string | null {
   return null
 }
 
-function notifyComplainantIfResolved(data: any, status?: string) {
+async function notifyComplainantOnStatusUpdate(data: any, status?: string): Promise<void> {
   const currentStatus = status || data?.status
-  if (currentStatus === 'काम पूरा' || currentStatus === 'पूरा') {
-    const toEmail = extractComplainantEmail(data)
-    if (toEmail) {
-      console.log(`[AdmComplaint] शिकायत ${data?.code} हल हुई। ईमेल भेजा जा रहा है: ${toEmail}`)
-      sendComplaintResolvedEmail({
-        code: data.code,
-        name: data.name,
-        toEmail,
-        category: data.category,
-        mohalla: data.mohalla,
-        detail: data.detail,
-        admin_note: data.admin_note,
-        after_photo_url: data.after_photo_url,
-        photo_url: data.photo_url,
-      }).catch(err => console.error('[AdmComplaint] Resolution email error:', err))
-    }
+  if (!currentStatus || !NOTIFIABLE_STATUSES.has(currentStatus)) return
+
+  const toEmail = extractComplainantEmail(data)
+  if (!toEmail) {
+    console.log(`[AdmComplaint] शिकायत ${data?.code}: ईमेल पता नहीं मिला — नागरिक को सूचना नहीं भेजी जा सकी।`)
+    return
+  }
+
+  console.log(`[AdmComplaint] शिकायत ${data?.code} स्थिति अपडेट (${currentStatus})। ईमेल भेजा जा रहा है: ${toEmail}`)
+  try {
+    await sendComplaintStatusUpdateEmail({
+      code: data.code,
+      name: data.name,
+      toEmail,
+      category: data.category,
+      mohalla: data.mohalla,
+      detail: data.detail,
+      status: currentStatus,
+      admin_note: data.admin_note,
+      after_photo_url: data.after_photo_url,
+      photo_url: data.photo_url,
+    })
+  } catch (err) {
+    console.error('[AdmComplaint] Status update email error:', err)
   }
 }
 
@@ -126,8 +140,9 @@ export async function POST(req: NextRequest) {
         revalidatePath(`/s/${data.code}`, 'page')
       }
 
-      // Send resolution notification email to citizen if status is काम पूरा
-      notifyComplainantIfResolved(data, status)
+      // Send status update email notification to citizen (स्वीकृत / काम चालू / काम पूरा)
+      // CRITICAL: Must await — Vercel kills floating promises after response is sent
+      await notifyComplainantOnStatusUpdate(data, status)
 
       return NextResponse.json({ ok: true, data })
     }
@@ -142,15 +157,17 @@ export async function POST(req: NextRequest) {
     if (status === 'हटाई' || action === 'delete') {
       const { data: existing } = await supabase
         .from('shikayat')
-        .select('code, photo_url, after_photo_url')
+        .select('code, photo_url, photo_urls, after_photo_url')
         .eq('id', id)
         .single()
 
       if (existing) {
-        const paths = [
-          extractStoragePath(existing.photo_url),
-          extractStoragePath(existing.after_photo_url),
-        ].filter(Boolean) as string[]
+        // Collect all photo paths to remove from storage
+        const urlsToDelete: (string | null)[] = [
+          ...(existing.photo_urls && existing.photo_urls.length > 0 ? existing.photo_urls : [existing.photo_url]),
+          existing.after_photo_url,
+        ]
+        const paths = urlsToDelete.map(extractStoragePath).filter(Boolean) as string[]
 
         if (paths.length > 0) {
           try {
@@ -212,8 +229,9 @@ export async function POST(req: NextRequest) {
       revalidatePath(`/s/${data.code}`, 'page')
     }
 
-    // Send resolution notification email to citizen if status is काम पूरा
-    notifyComplainantIfResolved(data, status)
+    // Send status update email notification to citizen (स्वीकृत / काम चालू / काम पूरा)
+    // CRITICAL: Must await — Vercel kills floating promises after response is sent
+    await notifyComplainantOnStatusUpdate(data, status)
 
     return NextResponse.json({ ok: true, data })
   } catch (err: any) {
@@ -235,15 +253,16 @@ export async function DELETE(req: NextRequest) {
     const supabase = getServiceClient()
     const { data: existing } = await supabase
       .from('shikayat')
-      .select('code, photo_url, after_photo_url')
+      .select('code, photo_url, photo_urls, after_photo_url')
       .eq('id', id)
       .single()
 
     if (existing) {
-      const paths = [
-        extractStoragePath(existing.photo_url),
-        extractStoragePath(existing.after_photo_url),
-      ].filter(Boolean) as string[]
+      const urlsToDelete: (string | null)[] = [
+        ...(existing.photo_urls && existing.photo_urls.length > 0 ? existing.photo_urls : [existing.photo_url]),
+        existing.after_photo_url,
+      ]
+      const paths = urlsToDelete.map(extractStoragePath).filter(Boolean) as string[]
 
       if (paths.length > 0) {
         try {

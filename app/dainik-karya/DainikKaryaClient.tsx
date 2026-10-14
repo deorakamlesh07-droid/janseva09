@@ -52,7 +52,24 @@ function formatDate(dateStr: string) {
 export default function DainikKaryaClient({ initialList }: { initialList: DainikKarya[] }) {
   const [filterCat, setFilterCat] = useState('सब')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activePhoto, setActivePhoto] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ photos: string[]; idx: number } | null>(null)
+
+  function openLightbox(photos: string[], idx: number) {
+    setLightbox({ photos, idx })
+  }
+  function closeLightbox() {
+    setLightbox(null)
+  }
+  function prevPhoto(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!lightbox) return
+    setLightbox({ photos: lightbox.photos, idx: (lightbox.idx - 1 + lightbox.photos.length) % lightbox.photos.length })
+  }
+  function nextPhoto(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!lightbox) return
+    setLightbox({ photos: lightbox.photos, idx: (lightbox.idx + 1) % lightbox.photos.length })
+  }
 
   const filtered = initialList.filter(item => {
     const matchesCat = filterCat === 'सब' || item.category === filterCat
@@ -342,103 +359,193 @@ export default function DainikKaryaClient({ initialList }: { initialList: Dainik
                     )}
                   </div>
 
-                  {/* Card Content & Photo */}
+                  {/* Card Content & Photo: Heading -> Photos -> Full Description */}
                   <div
                     style={{
                       padding: '18px 20px 20px',
-                      display: 'grid',
-                      gridTemplateColumns: item.photo_url ? '1fr 240px' : '1fr',
-                      gap: 20,
-                      alignItems: 'start',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 14,
                     }}
                   >
-                    <div>
-                      <h2
-                        style={{
-                          fontFamily: '"Anek Devanagari", sans-serif',
-                          fontSize: 'clamp(17px, 2.5vw, 20px)',
-                          fontWeight: 700,
-                          color: 'var(--ink)',
-                          margin: '0 0 10px',
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {item.title}
-                      </h2>
-                      <p
-                        style={{
-                          fontSize: 15,
-                          lineHeight: 1.65,
-                          color: '#374151',
-                          margin: 0,
-                          whiteSpace: 'pre-line',
-                        }}
-                      >
-                        {item.description}
-                      </p>
+                    {/* 1. Main Heading */}
+                    <h2
+                      style={{
+                        fontFamily: '"Anek Devanagari", sans-serif',
+                        fontSize: 'clamp(18px, 2.8vw, 22px)',
+                        fontWeight: 800,
+                        color: 'var(--ink)',
+                        margin: 0,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {item.title}
+                    </h2>
 
-                      <div
-                        style={{
-                          marginTop: 16,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          fontSize: 12.5,
-                          color: 'var(--ink2)',
-                        }}
-                      >
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ color: '#059669', fontWeight: 800 }}>✓</span>
-                          <span>संचालक प्रमाणित दैनिक गतिविधि</span>
-                        </span>
-                      </div>
-                    </div>
+                    {/* 2. Photo(s): thumbnail grid or single photo */}
+                    {(() => {
+                      const photos: string[] =
+                        item.photo_urls && item.photo_urls.length > 0
+                          ? item.photo_urls
+                          : item.photo_url
+                          ? [item.photo_url]
+                          : []
+                      if (photos.length === 0) return null
 
-                    {/* Photo thumbnail if present */}
-                    {item.photo_url && (
-                      <div>
-                        <div
-                          onClick={() => setActivePhoto(item.photo_url)}
-                          style={{
-                            borderRadius: 12,
-                            overflow: 'hidden',
-                            border: '1.5px solid var(--line)',
-                            cursor: 'pointer',
-                            position: 'relative',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                          }}
-                        >
-                          <img
-                            src={item.photo_url}
-                            alt={item.title}
-                            style={{
-                              width: '100%',
-                              height: 160,
-                              objectFit: 'cover',
-                              display: 'block',
-                            }}
-                          />
+                      if (photos.length === 1) {
+                        // Single photo — classic full-width display
+                        return (
                           <div
+                            onClick={() => openLightbox(photos, 0)}
                             style={{
-                              position: 'absolute',
-                              bottom: 6,
-                              right: 6,
-                              background: 'rgba(0,0,0,0.7)',
-                              color: '#fff',
-                              fontSize: 11,
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: 4,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
+                              borderRadius: 14,
+                              overflow: 'hidden',
+                              border: '1.5px solid var(--line)',
+                              cursor: 'pointer',
+                              position: 'relative',
+                              boxShadow: '0 3px 12px rgba(0,0,0,0.06)',
+                              background: '#f9fafb',
                             }}
                           >
-                            <span>🔍 बड़ी देखें</span>
+                            <img
+                              src={photos[0]}
+                              alt={item.title}
+                              style={{
+                                width: '100%',
+                                maxHeight: 320,
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: 8,
+                                right: 8,
+                                background: 'rgba(0,0,0,0.75)',
+                                color: '#fff',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                padding: '4px 10px',
+                                borderRadius: 6,
+                                backdropFilter: 'blur(4px)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                              }}
+                            >
+                              <span>🔍 बड़ी देखें</span>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      // Multiple photos — thumbnail grid
+                      return (
+                        <div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            {photos.map((url, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => openLightbox(photos, idx)}
+                                style={{
+                                  width: 96,
+                                  height: 96,
+                                  borderRadius: 10,
+                                  overflow: 'hidden',
+                                  border: '1.5px solid var(--line)',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  flexShrink: 0,
+                                  background: '#f9fafb',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.04)'
+                                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.13)'
+                                }}
+                                onMouseLeave={e => {
+                                  ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
+                                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'
+                                }}
+                              >
+                                <img
+                                  src={url}
+                                  alt={`${item.title} - फ़ोटो ${idx + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                  }}
+                                />
+                                {/* Overlay with number */}
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)',
+                                    color: '#fff',
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: '8px 6px 4px',
+                                    textAlign: 'right',
+                                  }}
+                                >
+                                  {idx + 1}/{photos.length}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 12.5, color: 'var(--ink2)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span>📸</span>
+                            <span>{photos.length} फ़ोटो — देखने के लिए क्लिक करें</span>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
+
+                    {/* 3. Entire Text Content below the photos (full width, clean spacing) */}
+                    <p
+                      style={{
+                        fontSize: 15.5,
+                        lineHeight: 1.75,
+                        color: '#374151',
+                        margin: 0,
+                        whiteSpace: 'pre-line',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {item.description}
+                    </p>
+
+                    {/* Verified Badge */}
+                    <div
+                      style={{
+                        marginTop: 4,
+                        paddingTop: 12,
+                        borderTop: '1px solid var(--paper)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        fontSize: 12.5,
+                        color: 'var(--ink2)',
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ color: '#059669', fontWeight: 800 }}>✓</span>
+                        <span>संचालक प्रमाणित दैनिक गतिविधि</span>
+                      </span>
+                    </div>
                   </div>
                 </article>
               )
@@ -491,14 +598,14 @@ export default function DainikKaryaClient({ initialList }: { initialList: Dainik
         </div>
       </section>
 
-      {/* Lightbox Modal for Photo */}
-      {activePhoto && (
+      {/* Lightbox Modal for Photos with navigation */}
+      {lightbox && (
         <div
-          onClick={() => setActivePhoto(null)}
+          onClick={closeLightbox}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.85)',
+            background: 'rgba(0,0,0,0.88)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -507,21 +614,88 @@ export default function DainikKaryaClient({ initialList }: { initialList: Dainik
             cursor: 'zoom-out',
           }}
         >
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+          <div
+            style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', gap: 12 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Prev button */}
+            {lightbox.photos.length > 1 && (
+              <button
+                type="button"
+                onClick={prevPhoto}
+                style={{
+                  position: 'absolute',
+                  left: -44,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: '#111827',
+                  border: 0,
+                  fontSize: 18,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                  zIndex: 2,
+                }}
+              >
+                ‹
+              </button>
+            )}
+
+            {/* Current photo */}
             <img
-              src={activePhoto}
-              alt="कार्य फ़ोटो"
+              src={lightbox.photos[lightbox.idx]}
+              alt={`कार्य फ़ोटो ${lightbox.idx + 1}`}
               style={{
-                maxWidth: '100%',
-                maxHeight: '90vh',
+                maxWidth: '85vw',
+                maxHeight: '85vh',
                 borderRadius: 10,
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
                 objectFit: 'contain',
+                display: 'block',
               }}
             />
+
+            {/* Next button */}
+            {lightbox.photos.length > 1 && (
+              <button
+                type="button"
+                onClick={nextPhoto}
+                style={{
+                  position: 'absolute',
+                  right: -44,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: '#111827',
+                  border: 0,
+                  fontSize: 18,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                  zIndex: 2,
+                }}
+              >
+                ›
+              </button>
+            )}
+
+            {/* Close button */}
             <button
               type="button"
-              onClick={() => setActivePhoto(null)}
+              onClick={closeLightbox}
               style={{
                 position: 'absolute',
                 top: -14,
@@ -543,6 +717,28 @@ export default function DainikKaryaClient({ initialList }: { initialList: Dainik
             >
               ✕
             </button>
+
+            {/* Counter badge */}
+            {lightbox.photos.length > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: -36,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(6px)',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: '5px 14px',
+                  borderRadius: 20,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {lightbox.idx + 1} / {lightbox.photos.length}
+              </div>
+            )}
           </div>
         </div>
       )}
